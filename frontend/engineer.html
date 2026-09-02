@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#1e3a8a">
+  <meta name="theme-color" content="#1d4ed8">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
   <title>TravelTrack - Service Engineer App (₹2.50/km)</title>
 
   <!-- Tailwind CSS CDN -->
@@ -28,15 +29,15 @@
 <body class="bg-slate-100 text-slate-900 flex justify-center min-h-[100dvh]">
 
   <!-- ==========================================================
-       FIELD ENGINEER STANDALONE WEB APP
+       FIELD ENGINEER STANDALONE WEB APP (iOS & ANDROID OPTIMIZED)
        ========================================================== -->
-  <div class="w-full max-w-md bg-slate-50 min-h-[100dvh] flex flex-col relative shadow-2xl border-x border-slate-200">
+  <div class="pwa-app-container">
     
-    <!-- Top Mobile Header -->
-    <header class="pwa-header-bar bg-gradient-to-r from-blue-700 to-indigo-800 text-white p-3.5 sticky top-0 z-40 shadow-md">
+    <!-- Top Mobile Header (with iOS Notch Safe-Area) -->
+    <header class="pwa-header-bar">
       <div class="flex justify-between items-center mb-1">
         <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-sm font-bold border border-white/20">
+          <div class="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center text-sm font-bold border border-white/20">
             <i class="fa-solid fa-user-gear"></i>
           </div>
           <div>
@@ -105,8 +106,8 @@
       </div>
     </div>
 
-    <!-- Scrollable Content Body -->
-    <main class="mobile-content-area flex-1">
+    <!-- Scrollable Content Body (iOS & Android Momentum Scrolling) -->
+    <main class="mobile-content-area">
 
       <!-- TAB 1: TODAY'S JOURNEY -->
       <div id="pwa-tab-today" class="pwa-tab-content">
@@ -132,7 +133,7 @@
           </div>
         </div>
         <div class="rounded-2xl overflow-hidden border border-slate-200 shadow-md">
-          <div id="engineer-mobile-map" class="h-[420px] w-full"></div>
+          <div id="engineer-mobile-map" class="h-[380px] w-full"></div>
         </div>
       </div>
 
@@ -224,7 +225,7 @@
 
     </main>
 
-    <!-- Fixed/Sticky Mobile Bottom Navigation Bar -->
+    <!-- Fixed Mobile Bottom Navigation Bar (iOS Safe Area & Android Gesture Insets) -->
     <nav class="mobile-bottom-nav">
       <button type="button" class="pwa-nav-btn text-blue-600 font-bold active-tab" onclick="engineerController.switchTab('pwa-tab-today', this)" data-tab="pwa-tab-today">
         <i class="fa-solid fa-list-check"></i>
