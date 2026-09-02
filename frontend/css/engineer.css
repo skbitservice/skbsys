@@ -1,0 +1,172 @@
+/* ==========================================================
+   ENGINEER TRAVEL DISTANCE & PAYOUT SYSTEM
+   Mobile App (PWA) Styling - iOS & Android Optimized
+   ========================================================== */
+
+/* Simulator Container (Desktop View) */
+.pwa-simulator-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 24px 16px 60px 16px;
+  min-height: calc(100dvh - 65px);
+  background: radial-gradient(circle at top, #f1f5f9, #e2e8f0);
+}
+
+/* Device Shell for Desktop Simulator */
+.mobile-device-shell {
+  width: 100%;
+  max-width: 420px;
+  background: #f8fafc;
+  border-radius: 40px;
+  box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.3), 0 0 0 10px #0f172a, 0 0 0 12px #334155;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 840px;
+  max-height: calc(100dvh - 90px);
+}
+
+.mobile-status-bar {
+  background: #0f172a;
+  color: #ffffff;
+  padding: 10px 22px 8px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+/* ==========================================================
+   NATIVE MOBILE VIEW (iOS & ANDROID DEVICES)
+   ========================================================== */
+@media (max-width: 768px) {
+  .pwa-simulator-container {
+    padding: 0;
+    margin: 0;
+    background: #f8fafc;
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
+    width: 100%;
+    align-items: stretch;
+  }
+  
+  .mobile-device-shell {
+    max-width: 100% !important;
+    width: 100% !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    min-height: 100dvh !important;
+    min-height: -webkit-fill-available !important;
+    height: 100dvh !important;
+    height: -webkit-fill-available !important;
+    border: none !important;
+    max-height: none !important;
+  }
+
+  .mobile-status-bar {
+    display: none !important;
+  }
+
+  .pwa-header-bar {
+    padding-top: max(14px, env(safe-area-inset-top, 14px)) !important;
+  }
+}
+
+/* Scrollable Main Area inside Phone View */
+.mobile-content-area {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 14px 14px 20px 14px;
+  touch-action: pan-y;
+}
+
+/* ==========================================================
+   FIXED & STICKY BOTTOM NAVIGATION BAR (iOS & ANDROID)
+   ========================================================== */
+.mobile-bottom-nav {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: calc(62px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+  z-index: 9999;
+  flex-shrink: 0;
+}
+
+.pwa-nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  height: 100%;
+  max-height: 60px;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s ease, color 0.15s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.pwa-nav-btn.text-blue-600,
+.pwa-nav-btn.active-tab {
+  color: #2563eb !important;
+  font-weight: 700 !important;
+}
+
+.pwa-nav-btn.text-slate-400 {
+  color: #94a3b8 !important;
+  font-weight: 500 !important;
+}
+
+.pwa-nav-btn:active {
+  transform: scale(0.92);
+}
+
+.pwa-nav-btn i {
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* Step Card states */
+.journey-step-card {
+  position: relative;
+  touch-action: manipulation;
+}
+
+.journey-step-card.active {
+  border-left: 4px solid var(--primary);
+}
+
+.journey-step-card.completed {
+  border-left: 4px solid var(--accent);
+}
+
+/* Prevent auto-zoom on iOS form inputs */
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}

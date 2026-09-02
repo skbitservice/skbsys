@@ -1,0 +1,28 @@
+{
+  "name": "engineer-travel-payout-system",
+  "version": "1.0.0",
+  "description": "Service Engineer Travel Distance & Payout Reimbursement System (₹2.50/km)",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "node backend/server.js",
+    "test": "node scratch/test_logic.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "field-service",
+    "travel-distance",
+    "payout",
+    "mileage-tracking",
+    "google-maps",
+    "gps-tracker"
+  ],
+  "author": "Antigravity",
+  "license": "ISC"
+}

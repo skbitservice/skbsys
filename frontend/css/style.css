@@ -1,0 +1,194 @@
+/* ==========================================================
+   ENGINEER TRAVEL DISTANCE & PAYOUT SYSTEM
+   Core Stylesheet & Design Tokens (iOS & Android Optimized)
+   ========================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --primary-light: #60a5fa;
+  --accent: #059669;
+  --accent-light: #34d399;
+  --warning: #d97706;
+  --danger: #dc2626;
+  
+  --bg-main: #f8fafc;
+  --bg-card: #ffffff;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --border-color: #e2e8f0;
+  
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  
+  --font-main: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  font-family: var(--font-main);
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: pan-y;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Map Markers Styling */
+.custom-map-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pin-inner {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13px;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  border: 2px solid #ffffff;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.pin-inner:hover, .pin-inner:active {
+  transform: scale(1.15);
+}
+
+.pin-inner.office {
+  background: linear-gradient(135deg, #1e40af, #3b82f6);
+  font-size: 14px;
+}
+
+.pin-inner.customer {
+  background: linear-gradient(135deg, #d97706, #f59e0b);
+}
+
+.pin-inner.home {
+  background: linear-gradient(135deg, #059669, #10b981);
+  font-size: 14px;
+}
+
+.pin-inner.live {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  animation: pulse-pin 1.5s infinite;
+}
+
+@keyframes pulse-pin {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* Map Popups */
+.map-popup-card {
+  padding: 4px;
+  font-family: var(--font-main);
+  min-width: 180px;
+}
+
+.map-popup-card .popup-tag {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+.map-popup-card .popup-tag.tag-office { background: #dbeafe; color: #1e40af; }
+.map-popup-card .popup-tag.tag-customer { background: #fef3c7; color: #92400e; }
+.map-popup-card .popup-tag.tag-home { background: #d1fae5; color: #065f46; }
+
+.map-popup-card .popup-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+
+.map-popup-card .popup-address {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.3;
+}
+
+.map-popup-card .popup-contact {
+  font-size: 11px;
+  color: #2563eb;
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.map-leg-popup {
+  font-size: 12px;
+  line-height: 1.4;
+  font-family: var(--font-main);
+}
+
+/* GPS Tracking Styles */
+.gps-active-glow {
+  box-shadow: 0 0 15px rgba(37, 99, 235, 0.4);
+}
+
+.radar-sweep {
+  position: relative;
+  overflow: hidden;
+}
+
+.radar-sweep::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(from 0deg, transparent 0deg, rgba(59, 130, 246, 0.25) 60deg, transparent 60deg);
+  animation: radar-spin 3s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes radar-spin {
+  100% { transform: rotate(360deg); }
+}

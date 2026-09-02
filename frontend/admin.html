@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Portal - Engineer Travel Distance & Payout System</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- FontAwesome Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Leaflet Maps CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- SheetJS (XLSX) for Excel Import & Export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="bg-slate-50 text-slate-900">
+
+  <!-- ==========================================================
+       ADMIN HEADER BAR
+       ========================================================== -->
+  <header class="h-16 bg-white border-b border-slate-200 px-4 md:px-6 flex items-center justify-between sticky top-0 z-50 shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-700 to-indigo-700 flex items-center justify-center text-white text-lg font-bold shadow-md shadow-blue-500/20 flex-shrink-0">
+        <i class="fa-solid fa-chart-line"></i>
+      </div>
+      <div>
+        <h1 class="font-extrabold text-slate-900 text-sm md:text-base tracking-tight flex items-center gap-2">
+          TravelTrack Pro <span class="text-slate-400 font-normal hidden sm:inline">|</span>
+          <span class="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">
+            Admin Operations Portal
+          </span>
+          <span class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-300 font-mono hidden md:inline">
+            ₹2.50 / KM Standard Rate
+          </span>
+        </h1>
+        <p class="text-xs text-slate-500 font-medium hidden sm:block">Office-to-Customer Dispatch, GPS Fleet Radar & Payout Approvals</p>
+      </div>
+    </div>
+
+    <!-- Admin Account & Actions -->
+    <div class="flex items-center gap-3">
+      <div class="hidden sm:flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700">
+        <i class="fa-solid fa-user-shield text-blue-600"></i>
+        <span>Admin Active</span>
+      </div>
+
+      <button onclick="adminController.logoutAdmin()" class="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold rounded-xl flex items-center gap-1.5 transition">
+        <i class="fa-solid fa-right-from-bracket"></i>
+        <span class="hidden sm:inline">Logout</span>
+      </button>
+
+      <a href="engineer.html" class="px-3.5 py-1.5 rounded-xl font-bold text-xs bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shadow-blue-500/20 flex items-center gap-1.5 transition" target="_blank" title="Open Field App in new tab">
+        <i class="fa-solid fa-mobile-screen"></i>
+        <span>Field App</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- ==========================================================
+       ADMIN MAIN LAYOUT
+       ========================================================== -->
+  <div class="admin-layout">
+    <!-- Admin Sidebar Navigation -->
+    <aside class="admin-sidebar">
+      <div class="mb-6 px-2">
+        <div class="text-[11px] uppercase tracking-wider text-slate-400 font-bold mb-1">Office Hub</div>
+        <div class="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+          <i class="fa-solid fa-building text-blue-600"></i> Main Office – Okhla Hub
+        </div>
+        <div class="text-[11px] text-slate-500 mt-0.5">Phase III, Okhla, New Delhi</div>
+      </div>
+
+      <nav class="space-y-1 flex-1">
+        <a href="#" data-tab="tab-dispatch" class="admin-nav-item flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-blue-600 text-white font-semibold text-xs shadow-md shadow-blue-500/20">
+          <i class="fa-solid fa-clipboard-list w-4"></i> Visit Dispatcher & Sequencer
+        </a>
+        <a href="#" data-tab="tab-engineers" class="admin-nav-item flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium text-xs transition">
+          <i class="fa-solid fa-users-gear w-4"></i> Engineers Directory & Passwords
+        </a>
+        <a href="#" data-tab="tab-map" class="admin-nav-item flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium text-xs transition">
+          <i class="fa-solid fa-satellite-dish w-4"></i> Live Fleet GPS Radar
+        </a>
+        <a href="#" data-tab="tab-statements" class="admin-nav-item flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium text-xs transition">
+          <i class="fa-solid fa-file-invoice-dollar w-4"></i> Daily Travel Statements
+        </a>
+        <a href="#" data-tab="tab-monthly" class="admin-nav-item flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium text-xs transition">
+          <i class="fa-solid fa-chart-pie w-4"></i> Monthly Payout Summary
+        </a>
+        <a href="#" data-tab="tab-settings" class="admin-nav-item flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium text-xs transition">
+          <i class="fa-solid fa-gear w-4"></i> System & Security Settings
+        </a>
+      </nav>
+
+      <div class="pt-4 border-t border-slate-200">
+        <button onclick="adminController.resetDataToDemo()" class="w-full py-2 px-3 text-slate-500 hover:text-slate-800 hover:bg-slate-100 text-xs font-semibold rounded-lg flex items-center justify-center gap-2">
+          <i class="fa-solid fa-rotate-left"></i> Restore Demo Data
+        </button>
+      </div>
+    </aside>
+
+    <!-- Admin Main Content Area -->
+    <main class="admin-main">
+
+      <!-- KPI METRIC OVERVIEW CARDS -->
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-5 kpi-grid">
+        <div class="kpi-card">
+          <div class="text-[11px] md:text-xs text-slate-500 font-medium mb-1">Active Engineers</div>
+          <div id="stat-active-engineers" class="text-xl md:text-2xl font-extrabold text-slate-900">4</div>
+          <div class="text-[10px] md:text-[11px] text-green-600 font-semibold mt-1"><i class="fa-solid fa-circle-check"></i> Field ready</div>
+        </div>
+        <div class="kpi-card">
+          <div class="text-[11px] md:text-xs text-slate-500 font-medium mb-1">Today's Jobs</div>
+          <div id="stat-today-jobs" class="text-xl md:text-2xl font-extrabold text-blue-600">5</div>
+          <div class="text-[10px] md:text-[11px] text-slate-500 mt-1">Delhi NCR Hubs</div>
+        </div>
+        <div class="kpi-card">
+          <div class="text-[11px] md:text-xs text-slate-500 font-medium mb-1">Today's KM</div>
+          <div id="stat-today-km" class="text-xl md:text-2xl font-extrabold text-indigo-600">45.0 km</div>
+          <div class="text-[10px] md:text-[11px] text-slate-500 mt-1">Okhla &rarr; Home</div>
+        </div>
+        <div class="kpi-card">
+          <div class="text-[11px] md:text-xs text-slate-500 font-medium mb-1">Today's Payout</div>
+          <div id="stat-today-payout" class="text-xl md:text-2xl font-extrabold text-emerald-600 font-mono">₹112.50</div>
+          <div class="text-[10px] md:text-[11px] text-emerald-700 font-semibold mt-1">@ ₹2.50 / km</div>
+        </div>
+        <div class="kpi-card">
+          <div class="text-[11px] md:text-xs text-slate-500 font-medium mb-1">Month Gross Payout</div>
+          <div id="stat-month-payout" class="text-xl md:text-2xl font-extrabold text-slate-800 font-mono">₹112.50</div>
+          <div class="text-[10px] md:text-[11px] text-slate-500 mt-1">Current Month</div>
+        </div>
+      </div>
+
+      <!-- ====================================================
+           TAB 1: VISIT DISPATCHER & ROUTE SEQUENCER
+           ==================================================== -->
+      <section id="tab-dispatch" class="admin-tab-content">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 bg-white p-3.5 md:p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div class="flex flex-wrap items-center gap-3">
+            <div>
+              <label class="block text-[10px] font-bold uppercase text-slate-400 mb-0.5">Date</label>
+              <input type="date" id="dispatch-date-picker" class="border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-800">
+            </div>
+            <div class="flex-1 min-w-[200px]">
+              <label class="block text-[10px] font-bold uppercase text-slate-400 mb-0.5">Engineer</label>
+              <select id="dispatch-engineer-select" class="w-full border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-800"></select>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="adminController.optimizeJobOrder()" class="flex-1 sm:flex-none px-3 py-1.5 bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Optimize
+            </button>
+            <button onclick="adminController.openAddJobModal()" class="flex-1 sm:flex-none px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow">
+              <i class="fa-solid fa-plus"></i> Add Stop
+            </button>
+            <label class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow cursor-pointer">
+              <i class="fa-solid fa-file-excel"></i> Import
+              <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" class="hidden">
+            </label>
+            <button onclick="reportsEngine.downloadJobsImportTemplate()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-bold" title="Template">
+              <i class="fa-solid fa-download"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-4 md:gap-6 dispatch-grid">
+          <!-- Left Column: Sequential Visit List -->
+          <div class="col-span-6">
+            <div class="bg-white p-3.5 rounded-xl border border-slate-200 mb-3 flex items-center justify-between">
+              <div>
+                <h3 class="font-bold text-slate-800 text-xs md:text-sm">Scheduled Stop Sequence</h3>
+                <p class="text-[11px] text-slate-500">Okhla Hub &rarr; Customers &rarr; Home</p>
+              </div>
+              <span class="text-[10px] md:text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-bold">
+                Rate: ₹2.50/KM
+              </span>
+            </div>
+
+            <!-- Start Hub Badge -->
+            <div class="bg-blue-50/50 border border-blue-200 rounded-xl p-3 mb-3 flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <div class="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
+                  <i class="fa-solid fa-building"></i>
+                </div>
+                <div>
+                  <div class="font-bold text-blue-950 text-xs">Start: Main Office – Okhla Hub</div>
+                  <div class="text-[10px] text-blue-700">Phase III, Okhla (28.5355, 77.2730)</div>
+                </div>
+              </div>
+              <span class="text-[9px] bg-blue-200 text-blue-900 font-bold px-1.5 py-0.5 rounded">Origin</span>
+            </div>
+
+            <!-- List of Customer Stops -->
+            <div id="dispatch-jobs-list" class="min-h-[200px]"></div>
+
+            <!-- End Hub Badge -->
+            <div class="bg-emerald-50/50 border border-emerald-200 rounded-xl p-3 mt-1 flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <div class="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">
+                  <i class="fa-solid fa-house-chimney"></i>
+                </div>
+                <div>
+                  <div class="font-bold text-emerald-950 text-xs">End: Engineer Home Location</div>
+                  <div class="text-[10px] text-emerald-700">Auto-calculated return leg</div>
+                </div>
+              </div>
+              <span class="text-[9px] bg-emerald-200 text-emerald-900 font-bold px-1.5 py-0.5 rounded">Final</span>
+            </div>
+          </div>
+
+          <!-- Right Column: Live Map & Calculation Preview -->
+          <div class="col-span-6">
+            <div class="sticky top-20">
+              <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm mb-4">
+                <div class="p-2.5 md:p-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                  <span class="font-bold text-xs text-slate-700 flex items-center gap-1.5">
+                    <i class="fa-solid fa-map text-blue-600"></i> Route Visualization
+                  </span>
+                  <span class="text-[10px] text-slate-500 font-medium">Google Maps & OSRM</span>
+                </div>
+                <div id="admin-route-map" class="h-[280px] md:h-[340px] w-full z-10"></div>
+              </div>
+
+              <div id="route-calculation-preview"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================
+           TAB 2: ENGINEERS DIRECTORY & PASSWORDS (SET BY ADMIN)
+           ==================================================== -->
+      <section id="tab-engineers" class="admin-tab-content hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 class="text-base md:text-lg font-extrabold text-slate-900">Service Engineers & Login Credentials</h2>
+            <p class="text-xs text-slate-500">Manage engineer staff, home GPS, and set their Login ID & Passwords.</p>
+          </div>
+          <button onclick="adminController.openAddEngineerModal()" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow">
+            <i class="fa-solid fa-user-plus"></i> Add New Engineer
+          </button>
+        </div>
+
+        <div class="table-responsive-wrapper bg-white rounded-xl border border-slate-200 shadow-sm">
+          <table class="w-full text-left border-collapse min-w-[700px]">
+            <thead>
+              <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                <th class="py-3 px-4">Engineer</th>
+                <th class="py-3 px-4">Phone</th>
+                <th class="py-3 px-4">Login ID & Password (Set by Admin)</th>
+                <th class="py-3 px-4">Home Address & GPS</th>
+                <th class="py-3 px-4">Vehicle</th>
+                <th class="py-3 px-4">Status</th>
+                <th class="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="engineers-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ====================================================
+           TAB 3: LIVE FLEET GPS TRACKER
+           ==================================================== -->
+      <section id="tab-map" class="admin-tab-content hidden">
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 mb-4 flex items-center justify-between shadow-sm">
+          <div>
+            <h2 class="text-xs md:text-base font-bold text-slate-900 flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping inline-block"></span>
+              Live Field Fleet GPS Radar
+            </h2>
+            <p class="text-[11px] text-slate-500 hidden sm:block">Real-time Google Maps positions, bike speeds, and breadcrumbs.</p>
+          </div>
+          <button onclick="adminController.renderFleetLiveTracker()" class="px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-bold border border-blue-200 flex items-center gap-1.5">
+            <i class="fa-solid fa-rotate"></i> Refresh
+          </button>
+        </div>
+
+        <div class="grid grid-cols-12 gap-4 md:gap-6 fleet-grid">
+          <div class="col-span-4 space-y-2.5" id="fleet-engineers-status-list"></div>
+          <div class="col-span-8">
+            <div class="bg-white rounded-xl md:rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+              <div id="fleet-live-map" class="h-[350px] md:h-[560px] w-full"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====================================================
+           TAB 4: DAILY TRAVEL STATEMENTS
+           ==================================================== -->
+      <section id="tab-statements" class="admin-tab-content hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+          <div>
+            <h2 class="text-xs md:text-base font-bold text-slate-900">Daily Travel Statements & Reimbursement</h2>
+            <p class="text-[11px] text-slate-500">Stop-by-stop logs, approvals, and PDF/Excel export.</p>
+          </div>
+          <input type="date" id="statement-date-picker" class="border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-800">
+        </div>
+
+        <div class="table-responsive-wrapper bg-white rounded-xl border border-slate-200 shadow-sm">
+          <table class="w-full text-left border-collapse min-w-[700px]">
+            <thead>
+              <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                <th class="py-3 px-4">Engineer</th>
+                <th class="py-3 px-4">Date</th>
+                <th class="py-3 px-4">Total Distance</th>
+                <th class="py-3 px-4">Rate</th>
+                <th class="py-3 px-4">Payout Amount</th>
+                <th class="py-3 px-4">Status</th>
+                <th class="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="statements-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ====================================================
+           TAB 5: MONTHLY PAYOUT SUMMARY
+           ==================================================== -->
+      <section id="tab-monthly" class="admin-tab-content hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+          <div>
+            <h2 class="text-xs md:text-base font-bold text-slate-900">Engineer-Wise Monthly Payout Summary</h2>
+            <p class="text-[11px] text-slate-500">Consolidated bike reimbursement totals for payroll.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="month" id="monthly-payout-picker" class="border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-800">
+            <button onclick="adminController.exportMonthlyExcel()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow">
+              <i class="fa-solid fa-file-excel"></i> Export
+            </button>
+          </div>
+        </div>
+
+        <div class="table-responsive-wrapper bg-white rounded-xl border border-slate-200 shadow-sm">
+          <table class="w-full text-left border-collapse min-w-[650px]">
+            <thead>
+              <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                <th class="py-3 px-4">Engineer Name</th>
+                <th class="py-3 px-4">Phone</th>
+                <th class="py-3 px-4 text-center">Working Trips</th>
+                <th class="py-3 px-4">Total Distance</th>
+                <th class="py-3 px-4">Rate</th>
+                <th class="py-3 px-4">Gross Payout</th>
+                <th class="py-3 px-4">Status</th>
+              </tr>
+            </thead>
+            <tbody id="monthly-payout-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ====================================================
+           TAB 6: SYSTEM SETTINGS & ADMIN SECURITY
+           ==================================================== -->
+      <section id="tab-settings" class="admin-tab-content hidden">
+        <div class="max-w-3xl bg-white p-4 md:p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <h2 class="text-base font-bold text-slate-900 mb-1">System & Admin Security Configuration</h2>
+          <p class="text-xs text-slate-500 mb-5">Configure Admin ID/Password, Office origin, reimbursement rate, and Google Maps.</p>
+
+          <form onsubmit="adminController.saveSettingsFromForm(event)" class="space-y-4">
+            
+            <!-- ADMIN CREDENTIALS SECTION -->
+            <div class="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl space-y-3">
+              <div class="flex items-center gap-2 font-bold text-xs text-blue-900">
+                <i class="fa-solid fa-shield-halved text-blue-600"></i> Admin Portal Login Credentials
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-700 mb-1">Admin Username / ID *</label>
+                  <input type="text" id="set-admin-username" class="w-full border border-blue-300 rounded-lg p-2.5 text-xs font-bold bg-white" placeholder="admin" required>
+                </div>
+                <div>
+                  <label class="block text-[11px] font-bold text-slate-700 mb-1">Admin Password *</label>
+                  <input type="password" id="set-admin-password" class="w-full border border-blue-300 rounded-lg p-2.5 text-xs font-bold bg-white font-mono" placeholder="admin123" required>
+                </div>
+              </div>
+              <p class="text-[10px] text-blue-700">These credentials are required to unlock and access this Admin Operations Portal.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Office Hub Name</label>
+                <input type="text" id="set-office-name" class="w-full border border-slate-300 rounded-lg p-2.5 text-xs font-medium" required>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Mileage Rate (₹ / KM)</label>
+                <input type="number" step="0.10" id="set-default-rate" class="w-full border border-slate-300 rounded-lg p-2.5 text-xs font-bold text-emerald-600 font-mono" value="2.50" required>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <label class="block text-xs font-bold text-slate-700">Office Address *</label>
+                <button type="button" id="btn-admin-detect-office-gps" onclick="adminController.autoDetectOfficeGPS()" class="text-[11px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1">
+                  <i class="fa-solid fa-location-crosshairs"></i> Auto-Detect Office GPS
+                </button>
+              </div>
+              <input type="text" id="set-office-address" class="w-full border border-slate-300 rounded-lg p-2.5 text-xs font-medium" required>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Office Latitude (GPS)</label>
+                <input type="number" step="any" id="set-office-lat" class="w-full border border-slate-300 rounded-lg p-2.5 text-xs font-mono" value="28.53551" required>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Office Longitude (GPS)</label>
+                <input type="number" step="any" id="set-office-lng" class="w-full border border-slate-300 rounded-lg p-2.5 text-xs font-mono" value="77.27308" required>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Company Name (for PDF Bills)</label>
+              <input type="text" id="set-company-name" class="w-full border border-slate-300 rounded-lg p-2.5 text-xs font-medium" required>
+            </div>
+
+            <div class="pt-3 border-t border-slate-200 flex justify-end">
+              <button type="submit" class="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow">
+                <i class="fa-solid fa-floppy-disk mr-1"></i> Save Configuration
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ==========================================================
+       MODALS
+       ========================================================== -->
+
+  <!-- MODAL: ADMIN LOGIN SCREEN -->
+  <div id="modal-admin-login" class="modal-overlay hidden" style="z-index: 10000; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(8px);">
+    <div class="modal-card p-6 max-w-sm border border-slate-700 shadow-2xl">
+      <div class="text-center mb-5">
+        <div class="w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-700 text-white rounded-2xl flex items-center justify-center text-2xl mx-auto mb-3 shadow-lg shadow-blue-500/30">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <h2 class="font-extrabold text-slate-900 text-lg">Admin Portal Login</h2>
+        <p class="text-xs text-slate-500 mt-1">TravelTrack Operations & Fleet Management</p>
+      </div>
+
+      <form onsubmit="adminController.submitAdminLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Admin ID / Username</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+              <i class="fa-solid fa-user"></i>
+            </span>
+            <input type="text" id="admin-login-username" class="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-blue-600" value="admin" placeholder="admin" required>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Admin Password</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+              <i class="fa-solid fa-lock"></i>
+            </span>
+            <input type="password" id="admin-login-password" class="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-blue-600 font-mono" value="admin123" placeholder="admin123" required>
+          </div>
+        </div>
+
+        <div class="bg-blue-50 p-2.5 rounded-xl border border-blue-200 text-[11px] text-blue-800">
+          <span class="font-bold">Default Credentials:</span><br>
+          Username: <strong>admin</strong> | Password: <strong>admin123</strong>
+        </div>
+
+        <button type="submit" class="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 transition active:scale-98">
+          <i class="fa-solid fa-right-to-bracket"></i> Login to Admin Portal
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD / EDIT ENGINEER (WITH ID & PASSWORD SET BY ADMIN) -->
+  <div id="modal-engineer" class="modal-overlay hidden">
+    <div class="modal-card p-4 md:p-6">
+      <div class="flex justify-between items-center mb-3 border-b border-slate-200 pb-2.5">
+        <h3 id="modal-engineer-title" class="font-bold text-slate-900 text-sm md:text-base">Add New Service Engineer</h3>
+        <button onclick="adminController.closeModal('modal-engineer')" class="text-slate-400 hover:text-slate-600 text-lg p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="form-engineer" onsubmit="adminController.saveEngineerFromForm(event)" class="space-y-3.5">
+        <input type="hidden" id="eng-id">
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Full Name *</label>
+            <input type="text" id="eng-name" class="w-full border border-slate-300 rounded-lg p-2 text-xs font-medium" placeholder="e.g. Rahul Kumar" required>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Phone Number *</label>
+            <input type="text" id="eng-phone" class="w-full border border-slate-300 rounded-lg p-2 text-xs font-medium" placeholder="+91 98765 43210" required>
+          </div>
+        </div>
+
+        <!-- LOGIN CREDENTIALS SET BY ADMIN -->
+        <div class="p-3 bg-blue-50/70 border border-blue-200 rounded-xl space-y-2">
+          <div class="flex items-center gap-1.5 text-xs font-bold text-blue-900">
+            <i class="fa-solid fa-key text-blue-600"></i> Engineer Login Credentials (Set by Admin)
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-0.5">Login ID / Username *</label>
+              <input type="text" id="eng-login-id" class="w-full border border-blue-300 rounded-lg p-2 text-xs font-bold bg-white" placeholder="rahul9876" required>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-700 mb-0.5">Password / Security PIN *</label>
+              <input type="text" id="eng-password" class="w-full border border-blue-300 rounded-lg p-2 text-xs font-bold bg-white font-mono" placeholder="1234" required>
+            </div>
+          </div>
+          <p class="text-[10px] text-blue-700">The field engineer will use this Login ID and Password to sign in on their mobile web app.</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Email</label>
+            <input type="email" id="eng-email" class="w-full border border-slate-300 rounded-lg p-2 text-xs font-medium" placeholder="rahul@company.in">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Vehicle Type</label>
+            <select id="eng-vehicle-type" class="w-full border border-slate-300 rounded-lg p-2 text-xs font-medium">
+              <option value="Motorcycle/Bike">Motorcycle / Bike</option>
+              <option value="Scooter">Scooter / Scooty</option>
+              <option value="Electric Bike">Electric Bike</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Vehicle Registration Number</label>
+          <input type="text" id="eng-vehicle-number" class="w-full border border-slate-300 rounded-lg p-2 text-xs font-mono uppercase" placeholder="DL 3S CM 4821">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Home Address *</label>
+          <input type="text" id="eng-address" class="w-full border border-slate-300 rounded-lg p-2 text-xs font-medium" placeholder="Pocket 1, Mayur Vihar Phase 1, New Delhi" required>
+        </div>
+
+        <!-- 1-Click GPS Detect & Map Location Picker -->
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label class="text-xs font-bold text-slate-700">Home GPS Coordinates</label>
+            <button type="button" id="btn-admin-detect-home-gps" onclick="adminController.autoDetectCurrentHomeGPS()" class="text-[11px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+              <i class="fa-solid fa-location-crosshairs"></i> Auto-Detect Current GPS
+            </button>
+          </div>
+          <div id="eng-home-map-picker" class="h-36 md:h-44 w-full rounded-xl border border-slate-300 mb-2"></div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-[10px] text-slate-500 uppercase font-bold">Latitude</label>
+              <input type="number" step="any" id="eng-lat" class="w-full border border-slate-300 rounded-lg p-1.5 text-xs font-mono" required>
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-500 uppercase font-bold">Longitude</label>
+              <input type="number" step="any" id="eng-lng" class="w-full border border-slate-300 rounded-lg p-1.5 text-xs font-mono" required>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <input type="checkbox" id="eng-active" checked class="rounded text-blue-600">
+          <label for="eng-active" class="text-xs font-semibold text-slate-700">Active for Daily Visit Dispatch</label>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2.5 border-t border-slate-200">
+          <button type="button" onclick="adminController.closeModal('modal-engineer')" class="px-4 py-2 border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow">Save Engineer & Password</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="modal-job" class="modal-overlay hidden">
+    <div class="modal-card p-4 md:p-6">
+      <div class="flex justify-between items-center mb-3 border-b border-slate-200 pb-2.5">
+        <h3 class="font-bold text-slate-900 text-sm md:text-base">Assign Customer Service Job</h3>
+        <button onclick="adminController.closeModal('modal-job')" class="text-slate-400 hover:text-slate-600 text-lg p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="form-job" onsubmit="adminController.saveJobFromForm(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Select Customer Location *</label>
+          <select id="job-customer-select" class="w-full border border-slate-300 rounded-lg p-2 text-xs font-medium" required></select>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Assign to Engineer *</label>
+            <select id="job-modal-engineer-select" class="w-full border border-slate-300 rounded-lg p-2 text-xs font-medium" required></select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Scheduled Date *</label>
+            <input type="date" id="job-date" class="w-full border border-slate-300 rounded-lg p-2 text-xs font-medium" required>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Job Title *</label>
+            <input type="text" id="job-title" class="w-full border border-slate-300 rounded-lg p-2 text-xs font-medium" placeholder="e.g. POS Terminal Calibration" required>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Priority</label>
+            <select id="job-priority" class="w-full border border-slate-300 rounded-lg p-2 text-xs font-medium">
+              <option value="Normal">Normal</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+              <option value="Critical">Critical</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Description / Task Notes</label>
+          <textarea id="job-desc" rows="2" class="w-full border border-slate-300 rounded-lg p-2 text-xs font-medium" placeholder="Enter service requirements..."></textarea>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2.5 border-t border-slate-200">
+          <button type="button" onclick="adminController.closeModal('modal-job')" class="px-4 py-2 border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow">Assign Job</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/distance.js"></script>
+  <script src="js/gps.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/reports.js"></script>
+  <script src="js/admin.js"></script>
+
+  <!-- Admin Portal Bootstrap -->
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await db.init();
+      adminController.init();
+
+      // Setup Sidebar Nav Links
+      document.querySelectorAll('.admin-nav-item').forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          const targetTab = link.getAttribute('data-tab');
+
+          document.querySelectorAll('.admin-nav-item').forEach(l => {
+            if (l.getAttribute('data-tab') === targetTab) {
+              l.className = 'admin-nav-item flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-blue-600 text-white font-semibold text-xs shadow-md shadow-blue-500/20';
+            } else {
+              l.className = 'admin-nav-item flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium text-xs transition';
+            }
+          });
+
+          document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.add('hidden'));
+          const target = document.getElementById(targetTab);
+          if (target) target.classList.remove('hidden');
+
+          if (targetTab === 'tab-dispatch') {
+            setTimeout(() => {
+              const map = mapManager.getMap('admin-route-map');
+              if (map) map.invalidateSize();
+            }, 200);
+          } else if (targetTab === 'tab-map') {
+            setTimeout(() => {
+              adminController.renderFleetLiveTracker();
+              const map = mapManager.getMap('fleet-live-map');
+              if (map) map.invalidateSize();
+            }, 200);
+          }
+        });
+      });
+
+      // Excel Bulk Import handler
+      const fileInput = document.getElementById('excel-file-input');
+      if (fileInput) {
+        fileInput.addEventListener('change', async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          try {
+            const rawData = await reportsEngine.parseJobsFile(file);
+            if (!rawData || rawData.length === 0) {
+              alert('No data rows found in uploaded file.');
+              return;
+            }
+
+            let count = 0;
+            const engineers = db.getEngineers();
+
+            rawData.forEach((row, idx) => {
+              const custName = row.CustomerName || row.customer_name;
+              const address = row.Address || row.address;
+              if (!custName || !address) return;
+
+              let customer = db.getCustomers().find(c => c.name.toLowerCase() === custName.toLowerCase());
+              if (!customer) {
+                customer = db.saveCustomer({
+                  name: custName,
+                  phone: row.Phone || '',
+                  address: address,
+                  latitude: parseFloat(row.Latitude || 28.5355),
+                  longitude: parseFloat(row.Longitude || 77.2730),
+                  city: 'New Delhi'
+                });
+              }
+
+              const engPhone = (row.EngineerPhone || '').toString().trim();
+              let eng = engineers.find(e => e.phone.includes(engPhone.replace(/\D/g, '').slice(-10)));
+              const assignedId = eng ? eng.id : (engineers[0] ? engineers[0].id : null);
+
+              db.saveJob({
+                title: row.Title || 'Scheduled Service Visit',
+                description: row.Description || '',
+                customer_id: customer.id,
+                engineer_id: assignedId,
+                scheduled_date: row.ScheduledDate || new Date().toISOString().split('T')[0],
+                priority: row.Priority || 'Normal',
+                sequence_order: idx + 1,
+                status: 'assigned'
+              });
+              count++;
+            });
+
+            alert(`✅ Successfully imported ${count} jobs from Excel!`);
+            adminController.renderJobsDispatcher();
+            adminController.renderOverviewMetrics();
+            fileInput.value = '';
+          } catch (err) {
+            alert('Failed to parse Excel file.');
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>

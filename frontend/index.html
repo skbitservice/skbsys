@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#1e3a8a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>TravelTrack - Service Engineer App (₹2.50/km)</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- FontAwesome Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Leaflet Maps CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- SheetJS (XLSX) for PDF/Excel Statements -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/engineer.css">
+</head>
+<body class="bg-slate-100 text-slate-900 flex justify-center min-h-[100dvh]">
+
+  <!-- ==========================================================
+       FIELD ENGINEER STANDALONE WEB APP
+       ========================================================== -->
+  <div class="w-full max-w-md bg-slate-50 min-h-[100dvh] flex flex-col relative shadow-2xl border-x border-slate-200">
+    
+    <!-- Top Mobile Header -->
+    <header class="pwa-header-bar bg-gradient-to-r from-blue-700 to-indigo-800 text-white p-3.5 sticky top-0 z-40 shadow-md">
+      <div class="flex justify-between items-center mb-1">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-sm font-bold border border-white/20">
+            <i class="fa-solid fa-user-gear"></i>
+          </div>
+          <div>
+            <span class="text-[9px] uppercase font-bold text-blue-200 tracking-wider">Field Engineer App</span>
+            <h2 id="pwa-eng-name" class="font-extrabold text-sm leading-tight">Rahul Kumar Sharma</h2>
+          </div>
+        </div>
+
+        <!-- Live Status Badge (Strict Personal View) -->
+        <div class="flex items-center gap-1.5 bg-emerald-500/20 border border-emerald-400/30 px-2.5 py-1 rounded-full text-[10px] font-bold text-emerald-200 shadow-sm">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>On Duty</span>
+        </div>
+      </div>
+
+      <!-- Vehicle & Rate Info -->
+      <div class="mt-1 text-[11px] text-blue-100 flex items-center justify-between">
+        <span id="pwa-eng-vehicle" class="truncate"><i class="fa-solid fa-motorcycle mr-1"></i> Honda Shine 125</span>
+        <span class="font-mono font-bold text-emerald-300 text-[10px] bg-blue-900/50 px-2 py-0.5 rounded">₹2.50 / KM Standard</span>
+      </div>
+    </header>
+
+    <!-- LIVE PHONE GPS CONTROL BAR -->
+    <div class="bg-slate-900 text-white p-3 border-b border-slate-800 flex-shrink-0">
+      <div class="flex justify-between items-center mb-1.5">
+        <div class="flex items-center gap-1.5">
+          <span class="text-xs font-bold">Phone GPS Tracker</span>
+          <span id="pwa-gps-status-badge" class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-800 text-slate-400 border border-slate-700">
+            GPS Standby
+          </span>
+        </div>
+        <span id="pwa-actual-gps-km" class="text-xs font-mono font-bold text-cyan-400">0.00 km logged</span>
+      </div>
+
+      <div class="text-[10px] text-slate-300 mb-2 truncate" id="pwa-gps-info-text">
+        Tap "Start Phone GPS" to track live bike movement
+      </div>
+
+      <!-- GPS Action Buttons -->
+      <div class="grid grid-cols-2 gap-2">
+        <button id="btn-pwa-toggle-gps" onclick="engineerController.togglePhoneGPS()" class="py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow transition">
+          <i class="fa-solid fa-satellite-dish"></i> Start Phone GPS
+        </button>
+        <button id="btn-pwa-toggle-sim" onclick="engineerController.toggleRideSimulation()" class="py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow transition">
+          <i class="fa-solid fa-gamepad"></i> Test Ride Sim
+        </button>
+      </div>
+    </div>
+
+    <!-- Geofence Proximity Alert Container -->
+    <div id="pwa-geofence-alert" class="p-2 hidden flex-shrink-0"></div>
+
+    <!-- Live Travel Stats Header Card -->
+    <div class="bg-white p-3 border-b border-slate-200 shadow-sm grid grid-cols-3 gap-1 text-center flex-shrink-0">
+      <div class="border-r border-slate-100">
+        <div class="text-[9px] text-slate-400 uppercase font-bold">My Planned KM</div>
+        <div id="pwa-today-km" class="font-extrabold text-slate-900 text-sm">45.0 km</div>
+      </div>
+      <div class="border-r border-slate-100">
+        <div class="text-[9px] text-slate-400 uppercase font-bold">Bike Rate</div>
+        <div id="pwa-today-rate" class="font-extrabold text-blue-600 text-sm">₹2.50/km</div>
+      </div>
+      <div>
+        <div class="text-[9px] text-slate-400 uppercase font-bold">My Payout</div>
+        <div id="pwa-today-payout" class="font-extrabold text-emerald-600 text-sm font-mono">₹112.50</div>
+      </div>
+    </div>
+
+    <!-- Scrollable Content Body -->
+    <main class="mobile-content-area flex-1">
+
+      <!-- TAB 1: TODAY'S JOURNEY -->
+      <div id="pwa-tab-today" class="pwa-tab-content">
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="font-extrabold text-slate-800 text-xs uppercase tracking-wider">My Route Schedule</h3>
+          <span id="pwa-trip-status-badge" class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+            Ready to Start
+          </span>
+        </div>
+
+        <!-- Step Cards Container (Okhla Hub -> My Customers -> My Home) -->
+        <div id="engineer-journey-cards"></div>
+      </div>
+
+      <!-- TAB 2: ROUTE MAP WITH GOOGLE MAPS -->
+      <div id="pwa-tab-map" class="pwa-tab-content hidden">
+        <div class="bg-white p-3 rounded-xl border border-slate-200 mb-3 text-xs flex justify-between items-center">
+          <div>
+            <span class="font-bold text-slate-800 flex items-center gap-1.5">
+              <i class="fa-brands fa-google text-blue-600"></i> My Live Google Route
+            </span>
+            <p class="text-[11px] text-slate-500">Okhla Hub &rarr; My Assigned Customers &rarr; My Home</p>
+          </div>
+        </div>
+        <div class="rounded-2xl overflow-hidden border border-slate-200 shadow-md">
+          <div id="engineer-mobile-map" class="h-[420px] w-full"></div>
+        </div>
+      </div>
+
+      <!-- TAB 3: PAST TRIPS HISTORY -->
+      <div id="pwa-tab-history" class="pwa-tab-content hidden">
+        <h3 class="font-extrabold text-slate-800 text-xs uppercase tracking-wider mb-3">My Reimbursement History</h3>
+        <div id="pwa-past-trips-list"></div>
+      </div>
+
+      <!-- TAB 4: PROFILE, 1-CLICK HOME GPS & CREDENTIALS -->
+      <div id="pwa-tab-profile" class="pwa-tab-content hidden">
+        <!-- Personal Identity Header Card -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 text-center mb-3 shadow-sm">
+          <div class="w-16 h-16 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-full flex items-center justify-center text-2xl mx-auto mb-2 shadow-md shadow-blue-500/20">
+            <i class="fa-solid fa-user-astronaut"></i>
+          </div>
+          <h3 id="pwa-profile-full-name" class="font-bold text-slate-900 text-base">Rahul Kumar Sharma</h3>
+          <p id="pwa-profile-role" class="text-xs text-blue-600 font-semibold">Senior Field Service Engineer</p>
+          
+          <div class="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-left text-xs">
+            <div class="bg-slate-50 p-2 rounded-xl border border-slate-100">
+              <span class="text-[10px] text-slate-400 uppercase font-bold block">Login ID</span>
+              <span id="pwa-profile-login-id" class="font-mono font-bold text-blue-700">rahul9876</span>
+            </div>
+            <div class="bg-slate-50 p-2 rounded-xl border border-slate-100">
+              <span class="text-[10px] text-slate-400 uppercase font-bold block">Mobile Phone</span>
+              <span id="pwa-eng-phone" class="font-mono font-semibold text-slate-800">+91 98765 43210</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 1-CLICK HOME GPS DETECTION CARD -->
+        <div class="bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-teal-500/10 border border-emerald-300 rounded-2xl p-4 mb-3 shadow-sm">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs">
+                <i class="fa-solid fa-house-chimney"></i>
+              </span>
+              <span class="font-bold text-emerald-950 text-xs uppercase tracking-wider">My Registered Home GPS</span>
+            </div>
+            <span class="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-300">
+              Return Leg
+            </span>
+          </div>
+
+          <div class="bg-white p-3 rounded-xl border border-emerald-200 mb-3 space-y-1">
+            <div class="text-[10px] text-slate-400 font-bold uppercase">Saved Home Address</div>
+            <p id="pwa-eng-home" class="font-bold text-slate-800 text-xs leading-snug">Mayur Vihar Phase 1, New Delhi</p>
+            <p id="pwa-eng-home-gps" class="font-mono text-[10px] text-emerald-700">GPS: 28.60830, 77.29520</p>
+          </div>
+
+          <!-- 1-Click GPS Detect & Save Button -->
+          <button id="btn-pwa-detect-home" onclick="engineerController.autoDetectAndSaveHomeLocation()" class="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition active:scale-98">
+            <i class="fa-solid fa-location-crosshairs text-sm"></i>
+            <span>Auto-Detect & Save My Current GPS as Home</span>
+          </button>
+          <p class="text-[10px] text-slate-500 text-center mt-2">Tap when standing at your home. It uses high-accuracy phone GPS and reverse-geocodes your address automatically.</p>
+        </div>
+
+        <!-- Account Actions & Logout -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 space-y-3 text-xs shadow-sm mb-3">
+          <div class="flex justify-between items-center">
+            <div>
+              <span class="font-bold text-slate-800 block text-xs">Field Account Security</span>
+              <span class="text-[11px] text-slate-500">Password managed & set by your Admin</span>
+            </div>
+            <button onclick="engineerController.logoutEngineer()" class="px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs rounded-xl border border-red-200 flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-right-from-bracket"></i> Logout
+            </button>
+          </div>
+        </div>
+
+        <!-- System Defaults -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 space-y-3 text-xs shadow-sm">
+          <div>
+            <span class="text-slate-400 block text-[10px] uppercase font-bold">Default Starting Hub</span>
+            <p class="font-semibold text-slate-800 mt-0.5 flex items-center gap-1.5">
+              <i class="fa-solid fa-building text-blue-600"></i> Main Office – Okhla Hub
+            </p>
+            <p class="text-[11px] text-slate-500">Phase III, Okhla Industrial Area (28.53551, 77.27308)</p>
+          </div>
+          <div class="pt-2 border-t border-slate-100">
+            <span class="text-slate-400 block text-[10px] uppercase font-bold">Mileage Reimbursement Rate</span>
+            <p class="font-bold text-emerald-600 font-mono text-sm mt-0.5">₹2.50 per Kilometer</p>
+            <p class="text-[11px] text-slate-500">Auto-calculated daily on ending trip at home.</p>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Fixed/Sticky Mobile Bottom Navigation Bar -->
+    <nav class="mobile-bottom-nav">
+      <button type="button" class="pwa-nav-btn text-blue-600 font-bold active-tab" onclick="engineerController.switchTab('pwa-tab-today', this)" data-tab="pwa-tab-today">
+        <i class="fa-solid fa-list-check"></i>
+        <span>Today</span>
+      </button>
+      <button type="button" class="pwa-nav-btn text-slate-400 font-medium" onclick="engineerController.switchTab('pwa-tab-map', this)" data-tab="pwa-tab-map">
+        <i class="fa-solid fa-map-location-dot"></i>
+        <span>Map</span>
+      </button>
+      <button type="button" class="pwa-nav-btn text-slate-400 font-medium" onclick="engineerController.switchTab('pwa-tab-history', this)" data-tab="pwa-tab-history">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+        <span>History</span>
+      </button>
+      <button type="button" class="pwa-nav-btn text-slate-400 font-medium" onclick="engineerController.switchTab('pwa-tab-profile', this)" data-tab="pwa-tab-profile">
+        <i class="fa-solid fa-user"></i>
+        <span>Profile</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ==========================================================
+       MODALS
+       ========================================================== -->
+
+  <!-- Modal: Engineer Account Login (ID & Password set by Admin) -->
+  <div id="modal-engineer-login" class="modal-overlay hidden" style="z-index: 10000; background: rgba(15, 23, 42, 0.96); backdrop-filter: blur(8px);">
+    <div class="modal-card p-5 max-w-sm border border-slate-700 shadow-2xl">
+      <div class="text-center mb-4">
+        <div class="w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-2xl flex items-center justify-center text-2xl mx-auto mb-2 shadow-lg shadow-blue-500/30">
+          <i class="fa-solid fa-user-astronaut"></i>
+        </div>
+        <h3 class="font-extrabold text-slate-900 text-base">Field Engineer Login</h3>
+        <p class="text-xs text-slate-500">Sign in with credentials set by your Admin</p>
+      </div>
+
+      <form onsubmit="engineerController.submitEngineerLogin(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Login ID or Registered Mobile *</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+              <i class="fa-solid fa-id-card"></i>
+            </span>
+            <input type="text" id="login-id-input" class="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-blue-600" value="rahul9876" placeholder="e.g. rahul9876 or 9876543210" required>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Password / Security PIN *</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+              <i class="fa-solid fa-lock"></i>
+            </span>
+            <input type="password" id="login-password-input" class="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-blue-600 font-mono" value="1234" placeholder="1234" required>
+          </div>
+        </div>
+
+        <!-- Quick Demo Switcher -->
+        <div class="bg-blue-50 p-2.5 rounded-xl border border-blue-200">
+          <div class="text-[10px] font-bold uppercase text-blue-800 mb-1.5 flex items-center gap-1">
+            <i class="fa-solid fa-users"></i> Quick Fill Demo Accounts (Pass: 1234):
+          </div>
+          <div class="grid grid-cols-2 gap-1.5 text-[10px]">
+            <button type="button" onclick="engineerController.quickFillDemo('rahul9876', '1234')" class="p-1 bg-white hover:bg-blue-100 border border-blue-200 rounded font-semibold text-slate-700 text-left truncate">
+              👨‍🔧 Rahul Sharma
+            </button>
+            <button type="button" onclick="engineerController.quickFillDemo('amit9875', '1234')" class="p-1 bg-white hover:bg-blue-100 border border-blue-200 rounded font-semibold text-slate-700 text-left truncate">
+              👨‍💼 Amit Verma
+            </button>
+            <button type="button" onclick="engineerController.quickFillDemo('vikas9874', '1234')" class="p-1 bg-white hover:bg-blue-100 border border-blue-200 rounded font-semibold text-slate-700 text-left truncate">
+              🧑‍🔧 Vikas Singh
+            </button>
+            <button type="button" onclick="engineerController.quickFillDemo('priya9873', '1234')" class="p-1 bg-white hover:bg-blue-100 border border-blue-200 rounded font-semibold text-slate-700 text-left truncate">
+              👩‍🔧 Priya Nair
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2 transition active:scale-98">
+          <i class="fa-solid fa-right-to-bracket"></i> Sign In to My App
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: In-App Google Maps Navigation Frame -->
+  <div id="modal-in-app-google-nav" class="modal-overlay hidden">
+    <div class="modal-card p-4 max-w-sm">
+      <div id="in-app-google-nav-content"></div>
+    </div>
+  </div>
+
+  <!-- Modal: Complete Job Signoff -->
+  <div id="modal-pwa-complete-job" class="modal-overlay hidden">
+    <div class="modal-card p-4 max-w-sm">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="font-bold text-slate-900 text-sm">Customer Job Sign-Off</h3>
+        <button onclick="document.getElementById('modal-pwa-complete-job').classList.add('hidden')" class="text-slate-400 p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <p id="pwa-complete-job-title" class="text-xs text-blue-600 font-bold mb-3"></p>
+
+      <form onsubmit="engineerController.submitJobCompletion(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Service Resolution Remarks</label>
+          <textarea id="pwa-job-notes" rows="3" class="w-full border border-slate-300 rounded-xl p-2.5 text-xs" placeholder="e.g. Device serviced, optic cleaned, tested OK with customer." required></textarea>
+        </div>
+
+        <button type="submit" class="w-full py-3 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-xl shadow-md flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-check"></i> Complete & Proceed to Next Stop
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Trip Completed Grand Summary -->
+  <div id="modal-pwa-trip-summary" class="modal-overlay hidden">
+    <div class="modal-card p-4 max-w-sm">
+      <div id="pwa-trip-summary-modal-content"></div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/distance.js"></script>
+  <script src="js/gps.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/reports.js"></script>
+  <script src="js/engineer.js"></script>
+
+  <!-- Standalone Engineer App Bootstrap -->
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await db.init();
+      engineerController.init();
+    });
+  </script>
+</body>
+</html>
