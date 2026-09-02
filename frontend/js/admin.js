@@ -1,12 +1,11 @@
 /**
  * Engineer Travel Distance & Payout System
- * Admin Portal Operations Controller with Authentication
- * - Dispatcher & Route Sequencer
+ * Admin Portal Operations Controller with Enterprise Case Import & Dispatcher
+ * - Specialized Excel Parser for Service Calls (CallType, Work Order, Serial No, Model, Company, Address, Pincode)
+ * - Interactive Bulk Case Assignment & Route Sequencer
  * - Engineer Directory with ID & Password set by Admin
- * - Admin Username & Password Configuration
  * - Live Fleet Radar on Google Maps
- * - Daily Statements & 1-Click Approvals
- * - Monthly Payout Payroll Summary (₹2.50/KM)
+ * - Daily Statements & Monthly Payouts (₹2.50/KM)
  */
 
 class AdminController {
@@ -15,6 +14,7 @@ class AdminController {
     this.selectedEngineerId = null;
     this.pickerMap = null;
     this.pickerMarker = null;
+    this.pendingImportedCases = [];
   }
 
   init() {
@@ -157,7 +157,7 @@ class AdminController {
   }
 
   // ==========================================================
-  // DISPATCHER & ROUTE SEQUENCER
+  // DISPATCHER & ROUTE SEQUENCER (WITH ENTERPRISE HARDWARE DETAILS)
   // ==========================================================
   async renderJobsDispatcher() {
     const container = document.getElementById('dispatch-jobs-list');
@@ -184,10 +184,16 @@ class AdminController {
       container.innerHTML = `
         <div class="p-6 text-center border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50 my-2">
           <div class="text-3xl mb-1">📋</div>
-          <p class="font-bold text-slate-700 text-xs">No service visits assigned for ${engineer.name} on this date.</p>
-          <button onclick="adminController.openAddJobModal()" class="mt-2.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold shadow">
-            + Assign First Stop
-          </button>
+          <p class="font-bold text-slate-700 text-xs">No service visits assigned for ${engineer.name} on ${this.currentDate}.</p>
+          <div class="mt-3 flex justify-center gap-2">
+            <button onclick="adminController.openAddJobModal()" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold shadow">
+              + Add Single Stop
+            </button>
+            <label class="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold shadow cursor-pointer">
+              <i class="fa-solid fa-file-excel mr-1"></i> Upload Excel Cases
+              <input type="file" accept=".xlsx, .xls, .csv" onchange="adminController.handleExcelFileUpload(event)" class="hidden">
+            </label>
+          </div>
         </div>
       `;
       if (previewContainer) previewContainer.innerHTML = '';
@@ -207,7 +213,7 @@ class AdminController {
     jobs.forEach((j, idx) => {
       const cust = db.getCustomerById(j.customer_id) || {};
       stops.push({
-        name: cust.name || `Customer ${idx + 1}`,
+        name: cust.name || `Stop ${idx + 1}`,
         type: 'customer',
         latitude: cust.latitude,
         longitude: cust.longitude,
@@ -234,15 +240,20 @@ class AdminController {
       const leg = journeyResult.legs[idx] || {};
 
       return `
-        <div class="job-sequence-card bg-white border border-slate-200 rounded-xl p-3 mb-2.5 shadow-sm hover:border-blue-400 transition" data-job-id="${job.id}">
+        <div class="job-sequence-card bg-white border border-slate-200 rounded-xl p-3.5 mb-2.5 shadow-sm hover:border-blue-400 transition" data-job-id="${job.id}">
           <div class="flex items-start justify-between">
-            <div class="flex items-center gap-2.5">
-              <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-800 font-bold text-xs flex items-center justify-center">
+            <div class="flex items-start gap-2.5">
+              <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-800 font-bold text-xs flex items-center justify-center flex-shrink-0 mt-0.5">
                 ${idx + 1}
               </span>
               <div>
-                <h4 class="font-bold text-slate-900 text-xs">${cust.name}</h4>
-                <p class="text-[11px] text-slate-500">${cust.address}</p>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h4 class="font-bold text-slate-900 text-xs">${cust.name}</h4>
+                  ${job.call_type ? `<span class="text-[9px] bg-purple-100 text-purple-800 font-bold px-1.5 py-0.2 rounded border border-purple-200">${job.call_type}</span>` : ''}
+                  ${job.work_order ? `<span class="text-[9px] bg-blue-50 text-blue-700 font-mono font-bold px-1.5 py-0.2 rounded border border-blue-200">${job.work_order}</span>` : ''}
+                </div>
+                <p class="text-[11px] text-slate-600 mt-0.5">${cust.address}</p>
+                ${cust.contact_person ? `<p class="text-[10px] text-slate-400"><i class="fa-solid fa-user text-slate-400 mr-1"></i>${cust.contact_person} • <i class="fa-solid fa-phone text-slate-400 mr-0.5"></i>${cust.phone || ''}</p>` : ''}
               </div>
             </div>
             <div class="flex items-center gap-1">
@@ -258,9 +269,19 @@ class AdminController {
             </div>
           </div>
 
+          <!-- Hardware & Serial Details from Excel -->
+          ${job.model_description || job.serial_no ? `
+            <div class="mt-2 p-2 bg-slate-50 rounded-lg border border-slate-100 text-[11px] flex justify-between items-center flex-wrap gap-1">
+              <span class="text-slate-700 font-medium truncate max-w-[240px]">
+                <i class="fa-solid fa-laptop text-blue-600 mr-1"></i>${job.model_description || job.title}
+              </span>
+              ${job.serial_no ? `<span class="font-mono text-[10px] text-slate-500 bg-white px-1.5 py-0.5 rounded border border-slate-200 font-bold">SN: ${job.serial_no}</span>` : ''}
+            </div>
+          ` : ''}
+
           <div class="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
-            <span class="text-slate-600 font-medium"><i class="fa-solid fa-wrench text-blue-500 mr-1"></i>${job.title}</span>
-            <span class="font-semibold text-emerald-700 font-mono">+${leg.distanceKm || 0} km (₹${(leg.amount || 0).toFixed(2)})</span>
+            <span class="text-slate-600 font-medium truncate">${job.title}</span>
+            <span class="font-semibold text-emerald-700 font-mono flex-shrink-0">+${leg.distanceKm || 0} km (₹${(leg.amount || 0).toFixed(2)})</span>
           </div>
         </div>
       `;
@@ -302,6 +323,180 @@ class AdminController {
     setTimeout(() => {
       mapManager.renderJourney('admin-route-map', stops, journeyResult.legs, journeyResult.allRouteCoordinates);
     }, 200);
+  }
+
+  // ==========================================================
+  // ENTERPRISE EXCEL CASE IMPORT & BULK DISPATCHER
+  // ==========================================================
+  async handleExcelFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      const parsedCases = await reportsEngine.parseJobsFile(file);
+      if (!parsedCases || parsedCases.length === 0) {
+        alert('⚠️ No valid service cases found in the uploaded Excel/CSV file.');
+        return;
+      }
+
+      this.openBulkCaseDispatcherModal(parsedCases);
+      event.target.value = '';
+    } catch (err) {
+      alert(`❌ Failed to read Excel file: ${err.message}`);
+    }
+  }
+
+  openBulkCaseDispatcherModal(cases) {
+    this.pendingImportedCases = cases;
+    const modal = document.getElementById('modal-bulk-case-dispatcher');
+    const tableBody = document.getElementById('bulk-cases-table-body');
+    const countBadge = document.getElementById('bulk-case-count-badge');
+    const engineers = db.getEngineers().filter(e => e.is_active !== false);
+
+    if (countBadge) countBadge.innerText = `${cases.length} Service Cases Parsed`;
+
+    const bulkSelectAll = document.getElementById('bulk-assign-all-engineer');
+    if (bulkSelectAll) {
+      bulkSelectAll.innerHTML = `<option value="">-- Choose Engineer to Assign All --</option>` +
+        engineers.map(e => `<option value="${e.id}">${e.name} (${e.vehicle_type || 'Bike'})</option>`).join('');
+    }
+
+    if (tableBody) {
+      tableBody.innerHTML = cases.map((c, idx) => {
+        // Smart Default: match nearest engineer or default to selected engineer
+        const defaultEngId = this.selectedEngineerId || (engineers[0] ? engineers[0].id : '');
+
+        return `
+          <tr class="border-b border-slate-100 hover:bg-slate-50 text-xs">
+            <td class="py-2.5 px-3">
+              <span class="font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 block w-fit mb-0.5">
+                ${c.work_order}
+              </span>
+              <span class="text-[10px] text-slate-500 font-mono block">Case: ${c.main_case}</span>
+              <span class="text-[9px] bg-purple-100 text-purple-800 font-bold px-1.5 py-0.2 rounded border border-purple-200 w-fit block mt-0.5">${c.call_type}</span>
+            </td>
+            <td class="py-2.5 px-3">
+              <div class="font-bold text-slate-900">${c.company_name}</div>
+              <div class="text-[11px] text-slate-500">${c.contact_person} • <span class="font-mono">${c.phone}</span></div>
+            </td>
+            <td class="py-2.5 px-3 max-w-[220px]">
+              <div class="font-medium text-slate-800 truncate" title="${c.model_description}">${c.model_description}</div>
+              <div class="text-[10px] font-mono text-slate-500 font-bold">SN: ${c.serial_no}</div>
+              <div class="text-[9px] text-slate-400">${c.otc_code}</div>
+            </td>
+            <td class="py-2.5 px-3 max-w-[240px]">
+              <div class="text-[11px] text-slate-700 truncate" title="${c.address}">${c.address}</div>
+              <div class="flex items-center gap-1.5 mt-0.5">
+                <span class="text-[10px] font-bold font-mono bg-emerald-50 text-emerald-700 px-1.5 py-0.2 rounded border border-emerald-200">
+                  PIN: ${c.pincode}
+                </span>
+                <span class="text-[9px] text-slate-400 font-mono">(${c.latitude}, ${c.longitude})</span>
+              </div>
+            </td>
+            <td class="py-2.5 px-3">
+              <select id="case-eng-select-${idx}" class="border border-slate-300 rounded-lg p-1.5 text-xs font-semibold text-slate-800 bg-white">
+                ${engineers.map(e => `<option value="${e.id}" ${e.id === defaultEngId ? 'selected' : ''}>${e.name}</option>`).join('')}
+              </select>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    if (modal) modal.classList.remove('hidden');
+  }
+
+  applyBulkEngineerToAll() {
+    const selectedEngId = document.getElementById('bulk-assign-all-engineer').value;
+    if (!selectedEngId) return;
+
+    this.pendingImportedCases.forEach((_, idx) => {
+      const select = document.getElementById(`case-eng-select-${idx}`);
+      if (select) select.value = selectedEngId;
+    });
+  }
+
+  autoDistributeByPincode() {
+    const engineers = db.getEngineers().filter(e => e.is_active !== false);
+    if (engineers.length === 0) return;
+
+    // Distribute cases based on geographical proximity to engineer's home GPS
+    this.pendingImportedCases.forEach((c, idx) => {
+      let nearestEng = engineers[0];
+      let minDistance = 9999;
+
+      engineers.forEach(eng => {
+        const dist = distanceEngine.haversine(c.latitude, c.longitude, eng.home_latitude, eng.home_longitude);
+        if (dist < minDistance) {
+          minDistance = dist;
+          nearestEng = eng;
+        }
+      });
+
+      const select = document.getElementById(`case-eng-select-${idx}`);
+      if (select) select.value = nearestEng.id;
+    });
+
+    alert('✨ Cases automatically distributed to engineers closest to the customer pincode & address!');
+  }
+
+  confirmAndDispatchBulkCases() {
+    if (!this.pendingImportedCases || this.pendingImportedCases.length === 0) return;
+
+    const scheduledDate = document.getElementById('bulk-dispatch-date').value || this.currentDate;
+    let createdCount = 0;
+
+    this.pendingImportedCases.forEach((c, idx) => {
+      const select = document.getElementById(`case-eng-select-${idx}`);
+      const assignedEngId = select ? select.value : this.selectedEngineerId;
+
+      // 1. Create or Find Customer
+      let customer = db.getCustomers().find(cust => cust.name.toLowerCase() === c.company_name.toLowerCase());
+      if (!customer) {
+        customer = db.saveCustomer({
+          name: c.company_name,
+          contact_person: c.contact_person,
+          phone: c.phone,
+          address: c.address,
+          latitude: c.latitude,
+          longitude: c.longitude,
+          pincode: c.pincode,
+          city: 'New Delhi'
+        });
+      }
+
+      // 2. Determine sequence order
+      const existingJobs = db.getJobs({ date: scheduledDate, engineerId: assignedEngId });
+
+      // 3. Save Job with rich hardware & case details
+      db.saveJob({
+        title: `${c.call_type} - ${c.model_description}`,
+        description: `Case: ${c.main_case} | WO: ${c.work_order} | Serial: ${c.serial_no} | Warranty: ${c.otc_code}`,
+        call_type: c.call_type,
+        work_order: c.work_order,
+        main_case: c.main_case,
+        serial_no: c.serial_no,
+        model_description: c.model_description,
+        otc_code: c.otc_code,
+        customer_id: customer.id,
+        engineer_id: assignedEngId,
+        scheduled_date: scheduledDate,
+        priority: c.call_type.includes('Breakdown') ? 'High' : 'Normal',
+        sequence_order: existingJobs.length + 1,
+        status: 'assigned'
+      });
+
+      createdCount++;
+    });
+
+    this.closeModal('modal-bulk-case-dispatcher');
+    this.currentDate = scheduledDate;
+    document.getElementById('dispatch-date-picker').value = scheduledDate;
+
+    this.renderJobsDispatcher();
+    this.renderOverviewMetrics();
+
+    alert(`✅ Successfully imported and dispatched ${createdCount} service cases! Google Maps route has been updated.`);
   }
 
   // ==========================================================

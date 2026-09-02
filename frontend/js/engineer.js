@@ -2,6 +2,7 @@
  * Engineer Travel Distance & Payout System
  * Engineer Mobile PWA Controller with Authentication & Password Verification
  * - Login ID & Password verified against credentials set by Admin
+ * - Enterprise Service Case Card View (Work Order, Serial No, Model, Call Type, Contact)
  * - Strict 1-to-1 data isolation for personal field dashboard
  */
 
@@ -449,7 +450,7 @@ class EngineerController {
   }
 
   // ==========================================================
-  // TODAY'S LIVE JOURNEY UI
+  // TODAY'S LIVE JOURNEY UI (WITH ENTERPRISE HARDWARE CARDS)
   // ==========================================================
   async renderTodayJourney() {
     const container = document.getElementById('engineer-journey-cards');
@@ -556,7 +557,7 @@ class EngineerController {
       </div>
     `;
 
-    // 2. Customer Stop Cards (1 to N)
+    // 2. Customer Stop Cards (with Work Order, Serial No, Hardware Model)
     jobs.forEach((job, idx) => {
       const cust = db.getCustomerById(job.customer_id) || {};
       const leg = journeyResult.legs[idx] || {};
@@ -566,34 +567,51 @@ class EngineerController {
       html += `
         <div class="journey-step-card ${isJobDone ? 'completed bg-green-50/20 border-green-200' : (isJobCurrent ? 'active border-blue-400 shadow-md ring-2 ring-blue-500/20' : 'opacity-70 border-slate-200')} bg-white p-4 rounded-2xl border mb-4 transition">
           <div class="flex items-start justify-between">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-full ${isJobDone ? 'bg-green-100 text-green-700' : (isJobCurrent ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500')} flex items-center justify-center font-bold text-sm shadow-sm">
+            <div class="flex items-start gap-3">
+              <div class="w-10 h-10 rounded-full ${isJobDone ? 'bg-green-100 text-green-700' : (isJobCurrent ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500')} flex items-center justify-center font-bold text-sm shadow-sm flex-shrink-0 mt-0.5">
                 ${isJobDone ? '<i class="fa-solid fa-check"></i>' : idx + 1}
               </div>
               <div>
-                <div class="flex items-center gap-2">
-                  <span class="text-[10px] uppercase font-bold tracking-wider ${isJobDone ? 'text-green-700' : 'text-blue-600'}">Customer Stop ${idx + 1}</span>
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="text-[10px] uppercase font-bold tracking-wider ${isJobDone ? 'text-green-700' : 'text-blue-600'}">Stop ${idx + 1}</span>
+                  ${job.work_order ? `<span class="text-[9px] bg-blue-100 text-blue-800 font-mono font-bold px-1.5 py-0.2 rounded border border-blue-200">${job.work_order}</span>` : ''}
+                  ${job.call_type ? `<span class="text-[9px] bg-purple-100 text-purple-800 font-bold px-1.5 py-0.2 rounded">${job.call_type}</span>` : ''}
                   <span class="text-[10px] bg-slate-100 text-slate-700 font-semibold px-1.5 py-0.5 rounded">${leg.distanceKm || 0} km (+₹${(leg.amount || 0).toFixed(2)})</span>
                 </div>
-                <h4 class="font-bold text-slate-800 text-sm">${cust.name}</h4>
-                <p class="text-xs text-slate-500">${cust.address}</p>
+                <h4 class="font-bold text-slate-800 text-sm mt-0.5">${cust.name}</h4>
+                <p class="text-xs text-slate-500 leading-snug">${cust.address}</p>
               </div>
             </div>
-            ${isJobDone ? `<span class="text-[11px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded">Completed</span>` : ''}
+            ${isJobDone ? `<span class="text-[11px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded">Done</span>` : ''}
           </div>
 
-          <div class="mt-3 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs flex justify-between items-center">
-            <div>
-              <div class="font-semibold text-slate-700"><i class="fa-solid fa-wrench text-blue-500 mr-1"></i>${job.title}</div>
-              <div class="text-[11px] text-slate-500">${cust.contact_person || 'Contact'} (${cust.phone || ''})</div>
+          <!-- Enterprise Hardware & Case Info Box -->
+          ${job.model_description || job.serial_no || job.main_case ? `
+            <div class="mt-2.5 bg-blue-50/60 p-2.5 rounded-xl border border-blue-100 text-xs space-y-1">
+              <div class="font-bold text-slate-800 flex items-center gap-1.5">
+                <i class="fa-solid fa-laptop text-blue-600"></i>
+                <span class="truncate">${job.model_description || job.title}</span>
+              </div>
+              <div class="flex items-center justify-between text-[11px] text-slate-600 pt-1 border-t border-blue-200/50">
+                <span><strong>Serial No:</strong> <span class="font-mono text-slate-900">${job.serial_no || 'N/A'}</span></span>
+                ${job.main_case ? `<span><strong>Case:</strong> <span class="font-mono text-slate-900">${job.main_case}</span></span>` : ''}
+              </div>
             </div>
-            <a href="tel:${cust.phone}" class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs hover:bg-emerald-200">
-              <i class="fa-solid fa-phone"></i>
+          ` : ''}
+
+          <!-- Customer Contact Bar -->
+          <div class="mt-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs flex justify-between items-center">
+            <div>
+              <div class="text-[11px] font-semibold text-slate-700">${cust.contact_person || 'Customer POC'}</div>
+              <div class="text-[10px] font-mono text-slate-500">${cust.phone || ''}</div>
+            </div>
+            <a href="tel:${cust.phone}" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg flex items-center gap-1 shadow-sm">
+              <i class="fa-solid fa-phone"></i> Call
             </a>
           </div>
 
           ${isJobCurrent ? `
-            <div class="mt-4 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2">
+            <div class="mt-3.5 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2">
               <button onclick="engineerController.openInAppGoogleNavigation('${job.id}')" class="py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 border border-blue-200">
                 <i class="fa-brands fa-google text-blue-600"></i> Google Nav
               </button>

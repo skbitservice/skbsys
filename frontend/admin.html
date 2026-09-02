@@ -162,12 +162,15 @@
             <button onclick="adminController.openAddJobModal()" class="flex-1 sm:flex-none px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow">
               <i class="fa-solid fa-plus"></i> Add Stop
             </button>
-            <label class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow cursor-pointer">
-              <i class="fa-solid fa-file-excel"></i> Import
-              <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" class="hidden">
+            
+            <!-- EXCEL UPLOAD FOR ENTERPRISE CASES -->
+            <label class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow cursor-pointer transition">
+              <i class="fa-solid fa-file-excel"></i> Import Service Cases
+              <input type="file" accept=".xlsx, .xls, .csv" onchange="adminController.handleExcelFileUpload(event)" class="hidden">
             </label>
-            <button onclick="reportsEngine.downloadJobsImportTemplate()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-bold" title="Template">
-              <i class="fa-solid fa-download"></i>
+
+            <button onclick="reportsEngine.downloadJobsImportTemplate()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold border border-slate-200" title="Download Excel Case Template">
+              <i class="fa-solid fa-download mr-1"></i> Template
             </button>
           </div>
         </div>
@@ -441,6 +444,73 @@
        MODALS
        ========================================================== -->
 
+  <!-- MODAL: INTERACTIVE BULK CASE DISPATCHER (PARSED FROM USER'S EXCEL FORMAT) -->
+  <div id="modal-bulk-case-dispatcher" class="modal-overlay hidden" style="z-index: 9999;">
+    <div class="modal-card p-5 max-w-5xl w-full max-h-[90vh] flex flex-col">
+      <div class="flex justify-between items-center mb-3 pb-3 border-b border-slate-200 flex-shrink-0">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-base shadow">
+            <i class="fa-solid fa-file-excel"></i>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-slate-900 text-base">Service Case Dispatcher</h3>
+            <span id="bulk-case-count-badge" class="text-xs text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+              0 Cases Found
+            </span>
+          </div>
+        </div>
+        <button onclick="adminController.closeModal('modal-bulk-case-dispatcher')" class="text-slate-400 hover:text-slate-600 text-xl p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Quick Controls Bar -->
+      <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 mb-3 flex flex-wrap items-center justify-between gap-2.5 flex-shrink-0">
+        <div class="flex items-center gap-2">
+          <label class="text-xs font-bold text-slate-700">Dispatch Date:</label>
+          <input type="date" id="bulk-dispatch-date" class="border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-semibold bg-white">
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <select id="bulk-assign-all-engineer" onchange="adminController.applyBulkEngineerToAll()" class="border border-blue-300 bg-white rounded-lg px-2.5 py-1 text-xs font-semibold text-blue-900"></select>
+
+          <button onclick="adminController.autoDistributeByPincode()" class="px-3 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-800 rounded-lg text-xs font-bold border border-purple-300 flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Match by Pincode Proximity
+          </button>
+        </div>
+      </div>
+
+      <!-- Scrollable Cases Preview Table -->
+      <div class="flex-1 overflow-y-auto border border-slate-200 rounded-xl mb-3 shadow-inner bg-white">
+        <table class="w-full text-left border-collapse min-w-[750px]">
+          <thead class="sticky top-0 bg-slate-100 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider z-10">
+            <tr>
+              <th class="py-2.5 px-3">Work Order / Case</th>
+              <th class="py-2.5 px-3">Customer / Company</th>
+              <th class="py-2.5 px-3">Model Description & Serial</th>
+              <th class="py-2.5 px-3">Address & SD Pincode</th>
+              <th class="py-2.5 px-3">Assign Engineer</th>
+            </tr>
+          </thead>
+          <tbody id="bulk-cases-table-body"></tbody>
+        </table>
+      </div>
+
+      <!-- Footer Confirm Actions -->
+      <div class="flex justify-between items-center pt-2 border-t border-slate-200 flex-shrink-0">
+        <span class="text-xs text-slate-500">All cases will be added to today's schedule and mapped from Okhla Hub @ ₹2.50/KM.</span>
+        <div class="flex gap-2">
+          <button type="button" onclick="adminController.closeModal('modal-bulk-case-dispatcher')" class="px-4 py-2 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100">
+            Cancel
+          </button>
+          <button type="button" onclick="adminController.confirmAndDispatchBulkCases()" class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-600/30 flex items-center gap-2">
+            <i class="fa-solid fa-paper-plane"></i> Confirm & Dispatch All Cases
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL: ADMIN LOGIN SCREEN -->
   <div id="modal-admin-login" class="modal-overlay hidden" style="z-index: 10000; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(8px);">
     <div class="modal-card p-6 max-w-sm border border-slate-700 shadow-2xl">
@@ -688,67 +758,6 @@
           }
         });
       });
-
-      // Excel Bulk Import handler
-      const fileInput = document.getElementById('excel-file-input');
-      if (fileInput) {
-        fileInput.addEventListener('change', async (e) => {
-          const file = e.target.files[0];
-          if (!file) return;
-
-          try {
-            const rawData = await reportsEngine.parseJobsFile(file);
-            if (!rawData || rawData.length === 0) {
-              alert('No data rows found in uploaded file.');
-              return;
-            }
-
-            let count = 0;
-            const engineers = db.getEngineers();
-
-            rawData.forEach((row, idx) => {
-              const custName = row.CustomerName || row.customer_name;
-              const address = row.Address || row.address;
-              if (!custName || !address) return;
-
-              let customer = db.getCustomers().find(c => c.name.toLowerCase() === custName.toLowerCase());
-              if (!customer) {
-                customer = db.saveCustomer({
-                  name: custName,
-                  phone: row.Phone || '',
-                  address: address,
-                  latitude: parseFloat(row.Latitude || 28.5355),
-                  longitude: parseFloat(row.Longitude || 77.2730),
-                  city: 'New Delhi'
-                });
-              }
-
-              const engPhone = (row.EngineerPhone || '').toString().trim();
-              let eng = engineers.find(e => e.phone.includes(engPhone.replace(/\D/g, '').slice(-10)));
-              const assignedId = eng ? eng.id : (engineers[0] ? engineers[0].id : null);
-
-              db.saveJob({
-                title: row.Title || 'Scheduled Service Visit',
-                description: row.Description || '',
-                customer_id: customer.id,
-                engineer_id: assignedId,
-                scheduled_date: row.ScheduledDate || new Date().toISOString().split('T')[0],
-                priority: row.Priority || 'Normal',
-                sequence_order: idx + 1,
-                status: 'assigned'
-              });
-              count++;
-            });
-
-            alert(`✅ Successfully imported ${count} jobs from Excel!`);
-            adminController.renderJobsDispatcher();
-            adminController.renderOverviewMetrics();
-            fileInput.value = '';
-          } catch (err) {
-            alert('Failed to parse Excel file.');
-          }
-        });
-      }
     });
   </script>
 </body>

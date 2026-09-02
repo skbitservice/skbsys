@@ -1,4 +1,5 @@
-Title,CustomerName,Phone,Address,Latitude,Longitude,EngineerPhone,ScheduledDate,Priority,Description
-Barcode Scanner Repair,Supreme Mart Saket,+91 98100 45678,"Select Citywalk, Saket, New Delhi",28.5284,77.2185,+91 98765 43210,2026-09-02,High,Replace worn scanning engine optic
-Thermal Printer Head Cleaning,TechServe Connaught Place,+91 98100 56789,"N-Block, Connaught Place, New Delhi",28.6315,77.2167,+91 98765 43210,2026-09-02,Medium,Line missing on thermal receipt roll
-Server Power Module Check,MaxCare Patparganj,+91 98100 67890,"I.P. Extension, Patparganj, New Delhi",28.6288,77.2985,+91 98765 43210,2026-09-02,High,Power supply fan vibrating loudly
+CallType,Branch,Main Case,Work Order,OTC Code,Serial No,Model Description,Company Name,Contact Person,Address,SD Pincode
+DG Call,New Delhi MA,5162695141,WO-035323420,05K-Extended Warranty,5CG5321RRC,HP EliteBook 845 14 inch G11 Notebook PC (8R632AV),HCL Technologies,Renu,"Contact No.:- +918826946463, F-127 phase 6 block F gali no 9 Ayanagr New Delhi 110047 F-127 phase 6 block F gali no 9 Ayanagr New Delhi 110047 New Delhi ,New Delhi ,Delhi ,India ,110047",110047
+Breakdown,New Delhi MA,5162695142,WO-035323421,01A-Standard Support,5CD4210KLM,Dell Latitude 5420 Core i5 11th Gen,Wipro Technologies,Vikram Malhotra,"Contact No.:- +919810012345, B-42 Central Market Lajpat Nagar II, New Delhi 110024",110024
+Preventive Maint,New Delhi MA,5162695143,WO-035323422,05K-Extended Warranty,8HJ9921XYZ,Lenovo ThinkPad T14 Gen 3,TCS Innovation Labs,Sneha Mehra,"Contact No.:- +919810023456, 408 Eros Corporate Tower Nehru Place, New Delhi 110019",110019
+Installation,Noida Branch,5162695144,WO-035323423,02B-Enterprise SLA,3BC1102QWE,HP ProBook 450 G9 Notebook,Global Diagnostics Center,Dr. Vivek Anand,"Contact No.:- +919810034567, A-15 Block A Sector 62, Noida UP 201309",201309
