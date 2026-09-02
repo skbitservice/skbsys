@@ -1,35 +1,30 @@
 {
-  "version": 2,
-  "builds": [
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
     {
-      "src": "backend/server.js",
-      "use": "@vercel/node"
+      "source": "/api/(.*)",
+      "destination": "/backend/server.js"
     },
     {
-      "src": "frontend/**",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "backend/server.js"
+      "source": "/admin",
+      "destination": "/frontend/admin.html"
     },
     {
-      "src": "/admin(.*)",
-      "dest": "/frontend/admin.html"
+      "source": "/engineer",
+      "destination": "/frontend/engineer.html"
     },
     {
-      "src": "/engineer(.*)",
-      "dest": "/frontend/engineer.html"
+      "source": "/portal",
+      "destination": "/frontend/portal.html"
     },
     {
-      "src": "/portal(.*)",
-      "dest": "/frontend/portal.html"
+      "source": "/",
+      "destination": "/frontend/index.html"
     },
     {
-      "src": "/(.*)",
-      "dest": "/frontend/$1"
+      "source": "/(.*)",
+      "destination": "/frontend/$1"
     }
   ]
 }
