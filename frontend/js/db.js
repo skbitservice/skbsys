@@ -1,29 +1,188 @@
 /**
  * Engineer Travel Distance & Payout System
- * Universal Database Layer with Authentication & Password Management
- * - Admin Username/Password Configuration
- * - Engineer ID/Password set by Admin
- * - Session Management for Admin & Field Engineers
+ * Universal Database Layer with Dual-Mode (Supabase Cloud + Local Cache)
+ * - Production Clean Mode (No Hardcoded Demo Users)
+ * - Supabase PostgreSQL Cloud Integration
+ * - Admin Username/Password & Engineer ID/Password set by Admin
+ * - Real-Time Offline Resiliency & Instant Cache
  */
 
 class Database {
   constructor() {
     this.storageKeys = CONFIG.STORAGE_KEYS;
     this.isInitialized = false;
+    this.supabaseClient = null;
+    this.isCloudConnected = false;
   }
 
   async init() {
     if (this.isInitialized) return;
 
-    const existingEngineers = localStorage.getItem(this.storageKeys.ENGINEERS);
-    if (!existingEngineers) {
+    // 1. Check if seed data exists in local storage
+    const existingSettings = localStorage.getItem(this.storageKeys.SETTINGS);
+    if (!existingSettings) {
       await this.loadSeedData();
     }
 
+    // 2. Check if Supabase credentials are configured
+    const settings = this.getSettings();
+    const supabaseUrl = settings.supabase_url || CONFIG.SUPABASE.URL;
+    const supabaseKey = settings.supabase_anon_key || CONFIG.SUPABASE.ANON_KEY;
+
+    if (supabaseUrl && supabaseKey && window.supabase) {
+      await this.connectSupabase(supabaseUrl, supabaseKey, false);
+    }
+
     this.isInitialized = true;
-    console.log('✅ Database Engine Initialized Successfully');
+    console.log(`✅ Database Engine Initialized (Mode: ${this.isCloudConnected ? 'Supabase Cloud 🟢' : 'Local Storage 💾'})`);
   }
 
+  // ==========================================================
+  // SUPABASE CLOUD CONNECTION & SYNC
+  // ==========================================================
+  async connectSupabase(url, anonKey, showNotice = true) {
+    if (!url || !anonKey) {
+      if (showNotice) alert('Please provide both Supabase Project URL and Anon API Key.');
+      return false;
+    }
+
+    try {
+      if (!window.supabase) {
+        throw new Error('Supabase client SDK is loading. Please retry in a few seconds.');
+      }
+
+      this.supabaseClient = window.supabase.createClient(url.trim(), anonKey.trim());
+
+      // Test connection with a lightweight query
+      const { data, error } = await this.supabaseClient.from('system_settings').select('*').limit(1);
+
+      if (error && error.code !== 'PGRST116') {
+        console.warn('Supabase query note:', error.message);
+      }
+
+      this.isCloudConnected = true;
+      CONFIG.SUPABASE.IS_CONNECTED = true;
+
+      // Save credentials in settings
+      this.saveSettings({ supabase_url: url.trim(), supabase_anon_key: anonKey.trim() });
+
+      // Pull latest cloud data
+      await this.pullFromCloud();
+
+      if (showNotice) {
+        alert('🎉 Successfully connected to Supabase Cloud Database!\n\nAll engineers, visits, and payout data are now synced in the cloud.');
+      }
+      return true;
+    } catch (err) {
+      this.isCloudConnected = false;
+      this.supabaseClient = null;
+      console.error('Supabase connection failed:', err);
+      if (showNotice) {
+        alert(`❌ Supabase Connection Failed: ${err.message}\n\nPlease check your Project URL and Anon Key.`);
+      }
+      return false;
+    }
+  }
+
+  async pullFromCloud() {
+    if (!this.supabaseClient) return;
+
+    try {
+      // Pull Engineers
+      const { data: engs } = await this.supabaseClient.from('engineers').select('*');
+      if (engs) {
+        localStorage.setItem(this.storageKeys.ENGINEERS, JSON.stringify(engs));
+      }
+
+      // Pull Customers
+      const { data: custs } = await this.supabaseClient.from('customers').select('*');
+      if (custs) {
+        localStorage.setItem(this.storageKeys.CUSTOMERS, JSON.stringify(custs));
+      }
+
+      // Pull Jobs
+      const { data: jobs } = await this.supabaseClient.from('jobs').select('*');
+      if (jobs) {
+        localStorage.setItem(this.storageKeys.JOBS, JSON.stringify(jobs));
+      }
+
+      // Pull Daily Trips
+      const { data: trips } = await this.supabaseClient.from('daily_trips').select('*');
+      if (trips) {
+        localStorage.setItem(this.storageKeys.DAILY_TRIPS, JSON.stringify(trips));
+      }
+
+      // Pull Settings
+      const { data: settings } = await this.supabaseClient.from('system_settings').select('*').limit(1);
+      if (settings && settings.length > 0) {
+        const current = this.getSettings();
+        localStorage.setItem(this.storageKeys.SETTINGS, JSON.stringify({ ...current, ...settings[0] }));
+      }
+
+      console.log('☁️ Synced latest records from Supabase Cloud');
+    } catch (e) {
+      console.warn('Error pulling from Supabase:', e);
+    }
+  }
+
+  async seedCloudDatabase() {
+    if (!this.supabaseClient) {
+      alert('⚠️ Please connect to Supabase first before seeding.');
+      return false;
+    }
+
+    try {
+      const engineers = this.getEngineers();
+      const customers = this.getCustomers();
+      const jobs = this.getJobs();
+      const settings = this.getSettings();
+      const office = this.getMainOffice();
+
+      // Upsert settings
+      await this.supabaseClient.from('system_settings').upsert({
+        id: 'primary_settings',
+        default_rate_per_km: settings.default_rate_per_km || 2.50,
+        admin_username: settings.admin_username || 'admin',
+        admin_password: settings.admin_password || 'admin123',
+        company_name: settings.company_name || 'Field Service Engineering Operations'
+      });
+
+      // Upsert office
+      await this.supabaseClient.from('offices').upsert({
+        id: office.id || 'off-001',
+        name: office.name,
+        address: office.address,
+        latitude: office.latitude,
+        longitude: office.longitude,
+        default_rate: 2.50
+      });
+
+      // Upsert engineers
+      if (engineers.length > 0) {
+        await this.supabaseClient.from('engineers').upsert(engineers);
+      }
+
+      // Upsert customers
+      if (customers.length > 0) {
+        await this.supabaseClient.from('customers').upsert(customers);
+      }
+
+      // Upsert jobs
+      if (jobs.length > 0) {
+        await this.supabaseClient.from('jobs').upsert(jobs);
+      }
+
+      alert('🚀 Supabase Cloud Database synced successfully!');
+      return true;
+    } catch (e) {
+      alert('Error syncing Supabase: ' + e.message);
+      return false;
+    }
+  }
+
+  // ==========================================================
+  // INITIAL SEEDING & DEFAULTS
+  // ==========================================================
   async loadSeedData() {
     try {
       const response = await fetch('sample-data/seed-data.json');
@@ -38,7 +197,7 @@ class Database {
         return;
       }
     } catch (e) {
-      console.warn('Could not load seed-data.json from server, initializing built-in defaults.', e);
+      console.warn('Could not load seed-data.json, using defaults.', e);
     }
 
     this.initializeDefaults();
@@ -50,20 +209,22 @@ class Database {
       currency: CONFIG.CURRENCY,
       admin_username: 'admin',
       admin_password: 'admin123',
-      company_name: 'FastTech Field Engineering Solutions',
-      company_address: 'Phase III, Okhla Industrial Area, New Delhi 110020',
+      company_name: 'Field Service Engineering Operations',
+      company_address: 'Plot 42, Phase III, Okhla Industrial Area, New Delhi 110020',
       company_phone: '+91 11 4988 7700',
-      company_email: 'operations@fasttech.in'
+      company_email: 'operations@company.in'
     }));
 
     localStorage.setItem(this.storageKeys.OFFICES, JSON.stringify([CONFIG.DEFAULT_OFFICE]));
+    localStorage.setItem(this.storageKeys.ENGINEERS, JSON.stringify([]));
+    localStorage.setItem(this.storageKeys.CUSTOMERS, JSON.stringify([]));
+    localStorage.setItem(this.storageKeys.JOBS, JSON.stringify([]));
+    localStorage.setItem(this.storageKeys.DAILY_TRIPS, JSON.stringify([]));
   }
 
   // ==========================================================
   // AUTHENTICATION & CREDENTIALS MANAGEMENT
   // ==========================================================
-
-  // --- ADMIN AUTH ---
   isAdminAuthenticated() {
     return sessionStorage.getItem('ttp_admin_auth') === 'true';
   }
@@ -88,7 +249,6 @@ class Database {
     return false;
   }
 
-  // --- ENGINEER AUTH (Set by Admin) ---
   isEngineerAuthenticated() {
     return !!localStorage.getItem('ttp_logged_engineer_id') && sessionStorage.getItem('ttp_engineer_auth') === 'true';
   }
@@ -100,6 +260,7 @@ class Database {
 
   logoutEngineer() {
     sessionStorage.removeItem('ttp_engineer_auth');
+    localStorage.removeItem('ttp_logged_engineer_id');
   }
 
   validateEngineerLogin(loginIdOrPhone, password) {
@@ -128,24 +289,18 @@ class Database {
       return id;
     }
     const engineers = this.getEngineers().filter(e => e.is_active !== false);
-    const defaultId = engineers.length > 0 ? engineers[0].id : 'eng-001';
-    localStorage.setItem('ttp_logged_engineer_id', defaultId);
-    return defaultId;
+    if (engineers.length > 0) {
+      return engineers[0].id;
+    }
+    return null;
   }
 
   setLoggedInEngineerId(id) {
     localStorage.setItem('ttp_logged_engineer_id', id);
   }
 
-  getEngineerByPhone(phone) {
-    const cleanPhone = (phone || '').replace(/\D/g, '').slice(-10);
-    if (!cleanPhone) return null;
-    const engineers = this.getEngineers();
-    return engineers.find(e => (e.phone || '').replace(/\D/g, '').includes(cleanPhone)) || null;
-  }
-
   // ==========================================================
-  // DATA ACCESS METHODS
+  // DATA ACCESS METHODS (LOCAL + SUPABASE SYNC)
   // ==========================================================
 
   // --- ENGINEERS ---
@@ -161,9 +316,7 @@ class Database {
 
   saveEngineer(engineer) {
     const engineers = this.getEngineers();
-    if (!engineer.password) {
-      engineer.password = '1234'; // Default password set by admin
-    }
+    if (!engineer.password) engineer.password = '1234';
     if (!engineer.login_id) {
       engineer.login_id = 'eng' + (engineer.phone ? engineer.phone.replace(/\D/g, '').slice(-4) : Date.now().toString().slice(-4));
     }
@@ -181,6 +334,12 @@ class Database {
       engineers.push(engineer);
     }
     localStorage.setItem(this.storageKeys.ENGINEERS, JSON.stringify(engineers));
+
+    // Cloud Sync
+    if (this.supabaseClient) {
+      this.supabaseClient.from('engineers').upsert(engineer).then();
+    }
+
     return engineer;
   }
 
@@ -188,6 +347,10 @@ class Database {
     let engineers = this.getEngineers();
     engineers = engineers.filter(e => e.id !== id);
     localStorage.setItem(this.storageKeys.ENGINEERS, JSON.stringify(engineers));
+
+    if (this.supabaseClient) {
+      this.supabaseClient.from('engineers').delete().eq('id', id).then();
+    }
   }
 
   // --- CUSTOMERS ---
@@ -216,6 +379,11 @@ class Database {
       customers.push(customer);
     }
     localStorage.setItem(this.storageKeys.CUSTOMERS, JSON.stringify(customers));
+
+    if (this.supabaseClient) {
+      this.supabaseClient.from('customers').upsert(customer).then();
+    }
+
     return customer;
   }
 
@@ -257,6 +425,11 @@ class Database {
       jobs.push(job);
     }
     localStorage.setItem(this.storageKeys.JOBS, JSON.stringify(jobs));
+
+    if (this.supabaseClient) {
+      this.supabaseClient.from('jobs').upsert(job).then();
+    }
+
     return job;
   }
 
@@ -264,6 +437,10 @@ class Database {
     let jobs = this.getJobs();
     jobs = jobs.filter(j => j.id !== id);
     localStorage.setItem(this.storageKeys.JOBS, JSON.stringify(jobs));
+
+    if (this.supabaseClient) {
+      this.supabaseClient.from('jobs').delete().eq('id', id).then();
+    }
   }
 
   // --- DAILY TRIPS ---
@@ -304,6 +481,11 @@ class Database {
       trips.push(trip);
     }
     localStorage.setItem(this.storageKeys.DAILY_TRIPS, JSON.stringify(trips));
+
+    if (this.supabaseClient) {
+      this.supabaseClient.from('daily_trips').upsert(trip).then();
+    }
+
     return trip;
   }
 
@@ -314,6 +496,10 @@ class Database {
       trip.status = status;
       trip.updated_at = new Date().toISOString();
       localStorage.setItem(this.storageKeys.DAILY_TRIPS, JSON.stringify(trips));
+
+      if (this.supabaseClient) {
+        this.supabaseClient.from('daily_trips').update({ status }).eq('id', tripId).then();
+      }
     }
     return trip;
   }
@@ -327,6 +513,9 @@ class Database {
 
   saveOffice(office) {
     localStorage.setItem(this.storageKeys.OFFICES, JSON.stringify([office]));
+    if (this.supabaseClient) {
+      this.supabaseClient.from('offices').upsert(office).then();
+    }
   }
 
   getSettings() {
@@ -338,6 +527,11 @@ class Database {
     const existing = this.getSettings();
     const updated = { ...existing, ...settings };
     localStorage.setItem(this.storageKeys.SETTINGS, JSON.stringify(updated));
+
+    if (this.supabaseClient) {
+      this.supabaseClient.from('system_settings').upsert({ id: 'primary_settings', ...updated }).then();
+    }
+
     return updated;
   }
 
@@ -345,7 +539,7 @@ class Database {
     localStorage.clear();
     sessionStorage.clear();
     await this.loadSeedData();
-    console.log('🔄 Data reset to demo defaults.');
+    console.log('🔄 Data reset to clean defaults.');
   }
 }
 

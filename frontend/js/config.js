@@ -1,6 +1,6 @@
 /**
  * Engineer Travel Distance & Payout System
- * System Configuration & Constants with Google Maps Integration
+ * System Configuration & Constants with Supabase Cloud Integration
  */
 
 const CONFIG = {
@@ -32,18 +32,18 @@ const CONFIG = {
     ACTIVE_VIEW: 'ttp_active_view'
   },
 
-  // Supabase Configuration
+  // Supabase Configuration (Connected Live)
   SUPABASE: {
-    URL: '',
-    ANON_KEY: '',
-    IS_CONNECTED: false
+    URL: 'https://hfmfmkngovhglouctpdc.supabase.co',
+    ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhmbWZta25nb3ZoZ2xvdWN0cGRjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2NTQ0NDUsImV4cCI6MjEwMzIzMDQ0NX0.Y8aY2rq8O_GaSIWhermhPUu6B2VjG3tWx7pyPislwrk',
+    IS_CONNECTED: true
   },
 
   // Google Maps & Map Provider Defaults
   MAP: {
     DEFAULT_CENTER: [28.53551, 77.27308],
     DEFAULT_ZOOM: 12,
-    DEFAULT_PROVIDER: 'google_roadmap', // 'google_roadmap', 'google_satellite', 'google_terrain', 'osm'
+    DEFAULT_PROVIDER: 'google_roadmap',
     
     // Tile Layer URLs
     LAYERS: {

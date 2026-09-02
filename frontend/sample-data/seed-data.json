@@ -4,10 +4,10 @@
     "currency": "₹",
     "admin_username": "admin",
     "admin_password": "admin123",
-    "company_name": "FastTech Field Engineering Solutions",
+    "company_name": "Field Service Engineering Operations",
     "company_address": "Plot 42, Phase III, Okhla Industrial Area, New Delhi 110020",
     "company_phone": "+91 11 4988 7700",
-    "company_email": "operations@fasttech.in"
+    "company_email": "operations@company.in"
   },
   "offices": [
     {
@@ -20,162 +20,8 @@
       "is_active": true
     }
   ],
-  "engineers": [
-    {
-      "id": "eng-001",
-      "name": "Rahul Kumar Sharma",
-      "login_id": "rahul9876",
-      "password": "1234",
-      "phone": "+91 98765 43210",
-      "email": "rahul.sharma@fasttech.in",
-      "home_address": "Pocket 1, Mayur Vihar Phase 1, New Delhi 110091",
-      "home_latitude": 28.60830,
-      "home_longitude": 77.29520,
-      "vehicle_type": "Motorcycle (Honda Shine 125)",
-      "vehicle_number": "DL 3S CM 4821",
-      "avatar": "👨‍🔧",
-      "is_active": true
-    },
-    {
-      "id": "eng-002",
-      "name": "Amit Verma",
-      "login_id": "amit9875",
-      "password": "1234",
-      "phone": "+91 98111 22334",
-      "email": "amit.verma@fasttech.in",
-      "home_address": "Pocket D-14, Sector 15, Rohini, New Delhi 110089",
-      "home_latitude": 28.72080,
-      "home_longitude": 77.12640,
-      "vehicle_type": "Motorcycle (Bajaj Pulsar 150)",
-      "vehicle_number": "DL 8S BK 9142",
-      "avatar": "👨‍💼",
-      "is_active": true
-    },
-    {
-      "id": "eng-003",
-      "name": "Vikas Singh",
-      "login_id": "vikas9874",
-      "password": "1234",
-      "phone": "+91 99223 34455",
-      "email": "vikas.singh@fasttech.in",
-      "home_address": "Block C, Sector 56, Gurgaon, Haryana 122011",
-      "home_latitude": 28.42850,
-      "home_longitude": 77.09840,
-      "vehicle_type": "Motorcycle (Hero Splendor Plus)",
-      "vehicle_number": "HR 26 DQ 7780",
-      "avatar": "🧑‍🔧",
-      "is_active": true
-    },
-    {
-      "id": "eng-004",
-      "name": "Priya Nair",
-      "login_id": "priya9873",
-      "password": "1234",
-      "phone": "+91 97654 88990",
-      "email": "priya.nair@fasttech.in",
-      "home_address": "Flat 402, Sector 10, Dwarka, New Delhi 110075",
-      "home_latitude": 28.58150,
-      "home_longitude": 77.05830,
-      "vehicle_type": "Scooter (TVS Jupiter 125)",
-      "vehicle_number": "DL 9S AU 1029",
-      "avatar": "👩‍🔧",
-      "is_active": true
-    }
-  ],
-  "customers": [
-    {
-      "id": "cust-001",
-      "name": "Rajesh Electronics & Retail",
-      "contact_person": "Mr. Rajesh Gupta",
-      "phone": "+91 98100 12345",
-      "address": "B-42, Central Market, Lajpat Nagar II, New Delhi",
-      "latitude": 28.56770,
-      "longitude": 77.24330,
-      "landmark": "Near Metro Gate No 2",
-      "city": "New Delhi"
-    },
-    {
-      "id": "cust-002",
-      "name": "Apex Infotech Solutions",
-      "contact_person": "Ms. Sneha Mehra",
-      "phone": "+91 98100 23456",
-      "address": "408, Eros Corporate Tower, Nehru Place, New Delhi",
-      "latitude": 28.54940,
-      "longitude": 77.25300,
-      "landmark": "Above Nehru Place Metro Station",
-      "city": "New Delhi"
-    },
-    {
-      "id": "cust-003",
-      "name": "Global Diagnostics Center",
-      "contact_person": "Dr. Vivek Anand",
-      "phone": "+91 98100 34567",
-      "address": "A-15, Block A, Sector 62, Noida, UP 201309",
-      "latitude": 28.62580,
-      "longitude": 77.36280,
-      "landmark": "Near Stellar IT Park",
-      "city": "Noida"
-    },
-    {
-      "id": "cust-004",
-      "name": "Metro Cash & Carry Hub",
-      "contact_person": "Mr. Amit Kapoor",
-      "phone": "+91 98100 45678",
-      "address": "Plot 18, Udyog Vihar Phase 4, Gurgaon, Haryana 122015",
-      "latitude": 28.49830,
-      "longitude": 77.08500,
-      "landmark": "Opposite Cyber City",
-      "city": "Gurgaon"
-    },
-    {
-      "id": "cust-005",
-      "name": "PrimeCare Multispecialty Hospital",
-      "contact_person": "Mr. Manoj Verma",
-      "phone": "+91 98100 56789",
-      "address": "Sector 11, Dwarka, New Delhi 110075",
-      "latitude": 28.58300,
-      "longitude": 77.06000,
-      "landmark": "Near Dwarka Sector 11 Metro",
-      "city": "New Delhi"
-    }
-  ],
-  "jobs": [
-    {
-      "id": "job-001",
-      "customer_id": "cust-001",
-      "engineer_id": "eng-001",
-      "scheduled_date": "2026-09-02",
-      "scheduled_time": "10:30",
-      "title": "POS Terminal Calibration & Network Sync",
-      "description": "Customer reported occasional transaction timeout on billing counter #2.",
-      "priority": "High",
-      "status": "assigned",
-      "sequence_order": 1
-    },
-    {
-      "id": "job-002",
-      "customer_id": "cust-002",
-      "engineer_id": "eng-001",
-      "scheduled_date": "2026-09-02",
-      "scheduled_time": "13:00",
-      "title": "Optical Network Terminal Firmware Upgrade",
-      "description": "Routine scheduled preventive maintenance for gigabit optical switch.",
-      "priority": "Normal",
-      "status": "assigned",
-      "sequence_order": 2
-    },
-    {
-      "id": "job-003",
-      "customer_id": "cust-003",
-      "engineer_id": "eng-001",
-      "scheduled_date": "2026-09-02",
-      "scheduled_time": "15:30",
-      "title": "Bio-Metric Attendance System Servicing",
-      "description": "Diagnostic scanner re-installation and cloud database sync validation.",
-      "priority": "Critical",
-      "status": "assigned",
-      "sequence_order": 3
-    }
-  ],
+  "engineers": [],
+  "customers": [],
+  "jobs": [],
   "daily_trips": []
 }

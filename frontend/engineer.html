@@ -22,6 +22,9 @@
   <!-- SheetJS (XLSX) for PDF/Excel Statements -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
+  <!-- Supabase Cloud JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <!-- Custom Styles -->
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/engineer.css">
@@ -29,7 +32,7 @@
 <body class="bg-slate-100 text-slate-900 flex justify-center min-h-[100dvh]">
 
   <!-- ==========================================================
-       FIELD ENGINEER STANDALONE WEB APP (iOS & ANDROID OPTIMIZED)
+       FIELD ENGINEER STANDALONE WEB APP (PRODUCTION READY)
        ========================================================== -->
   <div class="pwa-app-container">
     
@@ -42,11 +45,11 @@
           </div>
           <div>
             <span class="text-[9px] uppercase font-bold text-blue-200 tracking-wider">Field Engineer App</span>
-            <h2 id="pwa-eng-name" class="font-extrabold text-sm leading-tight">Rahul Kumar Sharma</h2>
+            <h2 id="pwa-eng-name" class="font-extrabold text-sm leading-tight">Field Engineer</h2>
           </div>
         </div>
 
-        <!-- Live Status Badge (Strict Personal View) -->
+        <!-- Live Status Badge -->
         <div class="flex items-center gap-1.5 bg-emerald-500/20 border border-emerald-400/30 px-2.5 py-1 rounded-full text-[10px] font-bold text-emerald-200 shadow-sm">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           <span>On Duty</span>
@@ -55,7 +58,7 @@
 
       <!-- Vehicle & Rate Info -->
       <div class="mt-1 text-[11px] text-blue-100 flex items-center justify-between">
-        <span id="pwa-eng-vehicle" class="truncate"><i class="fa-solid fa-motorcycle mr-1"></i> Honda Shine 125</span>
+        <span id="pwa-eng-vehicle" class="truncate"><i class="fa-solid fa-motorcycle mr-1"></i> Field Bike</span>
         <span class="font-mono font-bold text-emerald-300 text-[10px] bg-blue-900/50 px-2 py-0.5 rounded">₹2.50 / KM Standard</span>
       </div>
     </header>
@@ -93,8 +96,8 @@
     <!-- Live Travel Stats Header Card -->
     <div class="bg-white p-3 border-b border-slate-200 shadow-sm grid grid-cols-3 gap-1 text-center flex-shrink-0">
       <div class="border-r border-slate-100">
-        <div class="text-[9px] text-slate-400 uppercase font-bold">My Planned KM</div>
-        <div id="pwa-today-km" class="font-extrabold text-slate-900 text-sm">45.0 km</div>
+        <div class="text-[9px] text-slate-400 uppercase font-bold">Planned KM</div>
+        <div id="pwa-today-km" class="font-extrabold text-slate-900 text-sm">0.0 km</div>
       </div>
       <div class="border-r border-slate-100">
         <div class="text-[9px] text-slate-400 uppercase font-bold">Bike Rate</div>
@@ -102,7 +105,7 @@
       </div>
       <div>
         <div class="text-[9px] text-slate-400 uppercase font-bold">My Payout</div>
-        <div id="pwa-today-payout" class="font-extrabold text-emerald-600 text-sm font-mono">₹112.50</div>
+        <div id="pwa-today-payout" class="font-extrabold text-emerald-600 text-sm font-mono">₹0.00</div>
       </div>
     </div>
 
@@ -114,11 +117,11 @@
         <div class="flex justify-between items-center mb-3">
           <h3 class="font-extrabold text-slate-800 text-xs uppercase tracking-wider">My Route Schedule</h3>
           <span id="pwa-trip-status-badge" class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
-            Ready to Start
+            No Active Trip
           </span>
         </div>
 
-        <!-- Step Cards Container (Okhla Hub -> My Customers -> My Home) -->
+        <!-- Step Cards Container (Okhla Hub -> Assigned Customers -> Engineer Home) -->
         <div id="engineer-journey-cards"></div>
       </div>
 
@@ -150,17 +153,17 @@
           <div class="w-16 h-16 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-full flex items-center justify-center text-2xl mx-auto mb-2 shadow-md shadow-blue-500/20">
             <i class="fa-solid fa-user-astronaut"></i>
           </div>
-          <h3 id="pwa-profile-full-name" class="font-bold text-slate-900 text-base">Rahul Kumar Sharma</h3>
-          <p id="pwa-profile-role" class="text-xs text-blue-600 font-semibold">Senior Field Service Engineer</p>
+          <h3 id="pwa-profile-full-name" class="font-bold text-slate-900 text-base">Field Engineer</h3>
+          <p id="pwa-profile-role" class="text-xs text-blue-600 font-semibold">Service Engineer</p>
           
           <div class="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-left text-xs">
             <div class="bg-slate-50 p-2 rounded-xl border border-slate-100">
               <span class="text-[10px] text-slate-400 uppercase font-bold block">Login ID</span>
-              <span id="pwa-profile-login-id" class="font-mono font-bold text-blue-700">rahul9876</span>
+              <span id="pwa-profile-login-id" class="font-mono font-bold text-blue-700">--</span>
             </div>
             <div class="bg-slate-50 p-2 rounded-xl border border-slate-100">
               <span class="text-[10px] text-slate-400 uppercase font-bold block">Mobile Phone</span>
-              <span id="pwa-eng-phone" class="font-mono font-semibold text-slate-800">+91 98765 43210</span>
+              <span id="pwa-eng-phone" class="font-mono font-semibold text-slate-800">--</span>
             </div>
           </div>
         </div>
@@ -181,8 +184,8 @@
 
           <div class="bg-white p-3 rounded-xl border border-emerald-200 mb-3 space-y-1">
             <div class="text-[10px] text-slate-400 font-bold uppercase">Saved Home Address</div>
-            <p id="pwa-eng-home" class="font-bold text-slate-800 text-xs leading-snug">Mayur Vihar Phase 1, New Delhi</p>
-            <p id="pwa-eng-home-gps" class="font-mono text-[10px] text-emerald-700">GPS: 28.60830, 77.29520</p>
+            <p id="pwa-eng-home" class="font-bold text-slate-800 text-xs leading-snug">Tap button below to set home GPS</p>
+            <p id="pwa-eng-home-gps" class="font-mono text-[10px] text-emerald-700">GPS: --</p>
           </div>
 
           <!-- 1-Click GPS Detect & Save Button -->
@@ -250,10 +253,10 @@
        MODALS
        ========================================================== -->
 
-  <!-- Modal: Engineer Account Login (ID & Password set by Admin) -->
+  <!-- Modal: Engineer Account Login (Clean Production Form) -->
   <div id="modal-engineer-login" class="modal-overlay hidden" style="z-index: 10000; background: rgba(15, 23, 42, 0.96); backdrop-filter: blur(8px);">
-    <div class="modal-card p-5 max-w-sm border border-slate-700 shadow-2xl">
-      <div class="text-center mb-4">
+    <div class="modal-card p-6 max-w-sm border border-slate-700 shadow-2xl">
+      <div class="text-center mb-5">
         <div class="w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-2xl flex items-center justify-center text-2xl mx-auto mb-2 shadow-lg shadow-blue-500/30">
           <i class="fa-solid fa-user-astronaut"></i>
         </div>
@@ -261,14 +264,14 @@
         <p class="text-xs text-slate-500">Sign in with credentials set by your Admin</p>
       </div>
 
-      <form onsubmit="engineerController.submitEngineerLogin(event)" class="space-y-3.5">
+      <form onsubmit="engineerController.submitEngineerLogin(event)" class="space-y-4">
         <div>
           <label class="block text-xs font-bold text-slate-700 mb-1">Login ID or Registered Mobile *</label>
           <div class="relative">
             <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
               <i class="fa-solid fa-id-card"></i>
             </span>
-            <input type="text" id="login-id-input" class="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-blue-600" value="rahul9876" placeholder="e.g. rahul9876 or 9876543210" required>
+            <input type="text" id="login-id-input" class="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-blue-600" placeholder="Enter Login ID / Mobile" required>
           </div>
         </div>
 
@@ -278,28 +281,7 @@
             <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
               <i class="fa-solid fa-lock"></i>
             </span>
-            <input type="password" id="login-password-input" class="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-blue-600 font-mono" value="1234" placeholder="1234" required>
-          </div>
-        </div>
-
-        <!-- Quick Demo Switcher -->
-        <div class="bg-blue-50 p-2.5 rounded-xl border border-blue-200">
-          <div class="text-[10px] font-bold uppercase text-blue-800 mb-1.5 flex items-center gap-1">
-            <i class="fa-solid fa-users"></i> Quick Fill Demo Accounts (Pass: 1234):
-          </div>
-          <div class="grid grid-cols-2 gap-1.5 text-[10px]">
-            <button type="button" onclick="engineerController.quickFillDemo('rahul9876', '1234')" class="p-1 bg-white hover:bg-blue-100 border border-blue-200 rounded font-semibold text-slate-700 text-left truncate">
-              👨‍🔧 Rahul Sharma
-            </button>
-            <button type="button" onclick="engineerController.quickFillDemo('amit9875', '1234')" class="p-1 bg-white hover:bg-blue-100 border border-blue-200 rounded font-semibold text-slate-700 text-left truncate">
-              👨‍💼 Amit Verma
-            </button>
-            <button type="button" onclick="engineerController.quickFillDemo('vikas9874', '1234')" class="p-1 bg-white hover:bg-blue-100 border border-blue-200 rounded font-semibold text-slate-700 text-left truncate">
-              🧑‍🔧 Vikas Singh
-            </button>
-            <button type="button" onclick="engineerController.quickFillDemo('priya9873', '1234')" class="p-1 bg-white hover:bg-blue-100 border border-blue-200 rounded font-semibold text-slate-700 text-left truncate">
-              👩‍🔧 Priya Nair
-            </button>
+            <input type="password" id="login-password-input" class="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-blue-600 font-mono" placeholder="Enter Password" required>
           </div>
         </div>
 
@@ -331,7 +313,7 @@
       <form onsubmit="engineerController.submitJobCompletion(event)" class="space-y-3">
         <div>
           <label class="block text-xs font-semibold text-slate-700 mb-1">Service Resolution Remarks</label>
-          <textarea id="pwa-job-notes" rows="3" class="w-full border border-slate-300 rounded-xl p-2.5 text-xs" placeholder="e.g. Device serviced, optic cleaned, tested OK with customer." required></textarea>
+          <textarea id="pwa-job-notes" rows="3" class="w-full border border-slate-300 rounded-xl p-2.5 text-xs" placeholder="e.g. Device serviced, tested OK with customer." required></textarea>
         </div>
 
         <button type="submit" class="w-full py-3 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-xl shadow-md flex items-center justify-center gap-1.5">
