@@ -1,9 +1,6 @@
 /**
  * Engineer Travel Distance & Payout System
- * Admin Operations Portal Controller with Supabase Cloud Integration
- * - Full Excel Enterprise Case Dispatcher & Geo-matching
- * - Passwords and Login IDs for Engineers set by Admin
- * - Real-time Supabase Cloud Database Sync & Offline Resiliency
+ * Admin Operations Portal Controller with Supabase Cloud & Live Fleet Radar
  */
 
 class AdminController {
@@ -13,6 +10,7 @@ class AdminController {
     this.routeMap = null;
     this.fleetMap = null;
     this.parsedEnterpriseCases = [];
+    this.fleetPollingTimer = null;
   }
 
   init() {
@@ -56,6 +54,7 @@ class AdminController {
 
   logoutAdmin() {
     if (confirm('Logout from Admin Operations Portal?')) {
+      this.stopFleetRadarPolling();
       db.setAdminAuthenticated(false);
       this.checkAdminAuth();
     }
@@ -113,14 +112,23 @@ class AdminController {
 
   updateSupabaseStatusUI() {
     const badge = document.getElementById('supabase-status-badge');
+    const headerBadge = document.getElementById('header-supabase-badge');
     if (!badge) return;
 
     if (db.isCloudConnected) {
       badge.className = 'px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1.5';
       badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> <span>Supabase Connected 🟢</span>`;
+      if (headerBadge) {
+        headerBadge.className = 'text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-300 font-mono hidden md:inline';
+        headerBadge.innerText = '🟢 Supabase Live';
+      }
     } else {
       badge.className = 'px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-500 border border-slate-200 flex items-center gap-1.5';
       badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-400"></span> <span>Local Storage Mode 💾</span>`;
+      if (headerBadge) {
+        headerBadge.className = 'text-[10px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-full border border-slate-300 font-mono hidden md:inline';
+        headerBadge.innerText = '💾 Offline Ready';
+      }
     }
   }
 
@@ -171,7 +179,7 @@ class AdminController {
     `).join('');
 
     if (selDispatch) {
-      selDispatch.innerHTML = optionsHtml;
+      selDispatch.innerHTML = optionsHtml || `<option value="">No engineers registered</option>`;
       selDispatch.addEventListener('change', (e) => {
         this.selectedEngineerId = e.target.value;
         this.renderJobsDispatcher();
@@ -179,7 +187,7 @@ class AdminController {
     }
 
     if (selJobModal) {
-      selJobModal.innerHTML = optionsHtml;
+      selJobModal.innerHTML = optionsHtml || `<option value="">No engineers registered</option>`;
     }
   }
 
@@ -203,15 +211,6 @@ class AdminController {
     monthTrips.forEach(t => {
       monthPayout += Number(t.total_payout || 0);
     });
-
-    if (todayKm === 0 && jobs.length > 0) {
-      todayKm = 45.0;
-      todayPayout = 112.50;
-    }
-
-    if (monthPayout === 0) {
-      monthPayout = todayPayout > 0 ? todayPayout : 112.50;
-    }
 
     const elEng = document.getElementById('stat-active-engineers');
     const elJobs = document.getElementById('stat-today-jobs');
@@ -239,7 +238,16 @@ class AdminController {
 
     const engineer = db.getEngineerById(this.selectedEngineerId);
     if (!engineer) {
-      container.innerHTML = `<div class="p-6 text-center text-slate-400">No active engineer selected.</div>`;
+      container.innerHTML = `
+        <div class="bg-white p-6 rounded-xl border border-dashed border-slate-300 text-center text-slate-500 text-xs">
+          No service engineers added yet.
+          <div class="mt-2">
+            <button onclick="adminController.openAddEngineerModal()" class="text-blue-600 font-bold hover:underline">
+              + Add First Service Engineer
+            </button>
+          </div>
+        </div>
+      `;
       return;
     }
 
@@ -400,7 +408,7 @@ class AdminController {
   }
 
   // ==========================================================
-  // ENTERPRISE EXCEL IMPORT & BULK CASE DISPATCHER
+  // ENTERPRISE EXCEL IMPORT & BULK DISPATCHER
   // ==========================================================
   async handleExcelFileUpload(event) {
     const file = event.target.files[0];
@@ -576,7 +584,7 @@ class AdminController {
   }
 
   // ==========================================================
-  // JOB MANAGEMENT (ADD / MOVE / DELETE / OPTIMIZE)
+  // JOB MANAGEMENT
   // ==========================================================
   openAddJobModal() {
     const modal = document.getElementById('modal-job');
@@ -874,14 +882,29 @@ class AdminController {
   }
 
   // ==========================================================
-  // LIVE FLEET GPS RADAR
+  // REAL-TIME FLEET GPS RADAR (LIVE AUTO-SYNC)
   // ==========================================================
-  renderFleetLiveTracker() {
+  startFleetRadarPolling() {
+    this.stopFleetRadarPolling();
+    this.renderFleetLiveTracker();
+    this.fleetPollingTimer = setInterval(() => {
+      this.renderFleetLiveTracker();
+    }, 3000);
+  }
+
+  stopFleetRadarPolling() {
+    if (this.fleetPollingTimer) {
+      clearInterval(this.fleetPollingTimer);
+      this.fleetPollingTimer = null;
+    }
+  }
+
+  async renderFleetLiveTracker() {
     const container = document.getElementById('fleet-engineers-status-list');
     if (!container) return;
 
     const engineers = db.getEngineers().filter(e => e.is_active !== false);
-    const livePings = gpsTracker.getAllEngineersLiveLocations();
+    const livePings = await gpsTracker.getAllEngineersLiveLocations();
 
     container.innerHTML = engineers.map(eng => {
       const ping = livePings[eng.id] || {
@@ -896,26 +919,31 @@ class AdminController {
       const isLive = gpsTracker.isEngineerOnline(eng.id);
 
       return `
-        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+        <div class="bg-white p-3 rounded-xl border ${isLive ? 'border-green-300 bg-green-50/20 ring-1 ring-green-400/30' : 'border-slate-200'} shadow-sm flex items-center justify-between transition">
           <div class="flex items-center gap-2.5">
             <span class="w-3 h-3 rounded-full ${isLive ? 'bg-green-500 animate-ping' : 'bg-slate-300'}"></span>
             <div>
-              <div class="font-bold text-slate-900 text-xs">${eng.name}</div>
+              <div class="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                ${eng.name}
+                ${isLive ? `<span class="text-[9px] bg-red-100 text-red-700 font-bold px-1.5 py-0.2 rounded animate-pulse">ON ROAD</span>` : ''}
+              </div>
               <div class="text-[11px] text-slate-500">${eng.vehicle_type} (${eng.phone})</div>
             </div>
           </div>
           <div class="text-right">
-            <span class="text-[10px] font-mono font-bold ${isLive ? 'text-green-700 bg-green-50 px-1.5 py-0.5 rounded border border-green-200' : 'text-slate-400'}">
-              ${isLive ? `${ping.speedKmH} km/h` : 'Standby'}
+            <span class="text-[10px] font-mono font-bold ${isLive ? 'text-green-700 bg-green-100 px-2 py-0.5 rounded border border-green-300' : 'text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded'}">
+              ${isLive ? `🏍️ ${ping.speedKmH} km/h` : 'Standby'}
             </span>
           </div>
         </div>
       `;
     }).join('');
 
-    setTimeout(() => {
-      mapManager.renderFleetRadar('fleet-live-map', engineers, livePings);
-    }, 200);
+    if (engineers.length === 0) {
+      container.innerHTML = `<div class="p-6 text-center text-slate-400 text-xs">No active engineers in directory.</div>`;
+    }
+
+    mapManager.renderFleetRadar('fleet-live-map', engineers, livePings);
   }
 
   // ==========================================================
@@ -932,8 +960,8 @@ class AdminController {
     tbody.innerHTML = engineers.map(eng => {
       const trip = db.getTripByEngineerAndDate(eng.id, date);
       const jobs = db.getJobs({ date, engineerId: eng.id });
-      const totalKm = trip ? trip.total_km : (jobs.length > 0 ? 45.0 : 0);
-      const totalPayout = trip ? trip.total_payout : (totalKm * rate);
+      const totalKm = trip ? trip.total_km : 0;
+      const totalPayout = trip ? trip.total_payout : 0;
       const status = trip ? trip.status : (jobs.length > 0 ? 'in_progress' : 'no_trip');
 
       return `
@@ -975,9 +1003,9 @@ class AdminController {
       id: tripId,
       engineer_id: this.selectedEngineerId,
       trip_date: this.currentDate,
-      total_km: 45.0,
+      total_km: 0,
       rate_per_km: 2.50,
-      total_payout: 112.50
+      total_payout: 0
     };
     const eng = db.getEngineerById(trip.engineer_id);
     reportsEngine.generatePrintableStatement(trip, eng, trip.legs || []);
@@ -1004,16 +1032,11 @@ class AdminController {
         totalPayout += Number(t.total_payout || 0);
       });
 
-      if (trips.length === 0) {
-        totalKm = 45.0;
-        totalPayout = 112.50;
-      }
-
       return `
         <tr class="border-b border-slate-100 hover:bg-slate-50 text-xs">
           <td class="py-3 px-4 font-bold text-slate-900">${eng.name}</td>
           <td class="py-3 px-4 text-slate-600 font-mono">${eng.phone}</td>
-          <td class="py-3 px-4 text-center font-bold">${trips.length || 1}</td>
+          <td class="py-3 px-4 text-center font-bold">${trips.length}</td>
           <td class="py-3 px-4 font-bold">${totalKm.toFixed(1)} km</td>
           <td class="py-3 px-4 font-mono text-slate-600">₹${rate.toFixed(2)}/km</td>
           <td class="py-3 px-4 font-bold font-mono text-emerald-600 text-sm">₹${totalPayout.toFixed(2)}</td>
@@ -1041,10 +1064,6 @@ class AdminController {
         totalKm += Number(t.total_km || 0);
         totalPayout += Number(t.total_payout || 0);
       });
-      if (trips.length === 0) {
-        totalKm = 45.0;
-        totalPayout = 112.50;
-      }
 
       return {
         'Engineer ID': eng.login_id || eng.id,
@@ -1052,7 +1071,7 @@ class AdminController {
         'Mobile Phone': eng.phone,
         'Vehicle': eng.vehicle_type,
         'Month': month,
-        'Total Working Trips': trips.length || 1,
+        'Total Working Trips': trips.length,
         'Total Kilometers': totalKm,
         'Rate (₹/KM)': rate,
         'Gross Payout (₹)': totalPayout,
@@ -1086,7 +1105,7 @@ class AdminController {
     if (elOffLat) elOffLat.value = office.latitude;
     if (elOffLng) elOffLng.value = office.longitude;
     if (elRate) elRate.value = settings.default_rate_per_km || CONFIG.DEFAULT_RATE_PER_KM;
-    if (elCompName) elCompName.value = settings.company_name || 'FastTech Field Engineering Solutions';
+    if (elCompName) elCompName.value = settings.company_name || 'Field Service Engineering Operations';
     if (elAdminUser) elAdminUser.value = settings.admin_username || 'admin';
     if (elAdminPass) elAdminPass.value = settings.admin_password || 'admin123';
     if (elSupUrl) elSupUrl.value = settings.supabase_url || CONFIG.SUPABASE.URL;
@@ -1160,7 +1179,7 @@ class AdminController {
   }
 
   async resetDataToDemo() {
-    if (confirm('Reset all demo engineers, jobs, and settings to original defaults?')) {
+    if (confirm('Reset database to clean defaults?')) {
       await db.resetToDemo();
       location.reload();
     }

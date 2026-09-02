@@ -784,16 +784,19 @@
           if (target) target.classList.remove('hidden');
 
           if (targetTab === 'tab-dispatch') {
+            adminController.stopFleetRadarPolling();
             setTimeout(() => {
               const map = mapManager.getMap('admin-route-map');
               if (map) map.invalidateSize();
             }, 200);
           } else if (targetTab === 'tab-map') {
+            adminController.startFleetRadarPolling();
             setTimeout(() => {
-              adminController.renderFleetLiveTracker();
               const map = mapManager.getMap('fleet-live-map');
               if (map) map.invalidateSize();
             }, 200);
+          } else {
+            adminController.stopFleetRadarPolling();
           }
         });
       });

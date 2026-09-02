@@ -1,6 +1,6 @@
 /**
  * Engineer Travel Distance & Payout System
- * Leaflet Interactive Map Manager with Google Maps Layers & Live Fleet Radar
+ * Map Manager & Visualization Engine (Leaflet + Google Maps / OSM)
  */
 
 class MapManager {
@@ -11,68 +11,63 @@ class MapManager {
     this.liveMarkers = new Map();
     this.liveAccuracyCircles = new Map();
     this.breadcrumbLines = new Map();
-    this.currentTileLayers = new Map();
   }
 
-  /**
-   * Initialize Map with Google Maps / OpenStreetMap Layer
-   */
-  init(containerId, center = CONFIG.MAP.DEFAULT_CENTER, zoom = CONFIG.MAP.DEFAULT_ZOOM, layerType = 'google_roadmap') {
+  init(containerId, center = CONFIG.MAP.DEFAULT_CENTER, zoom = CONFIG.MAP.DEFAULT_ZOOM) {
     const container = document.getElementById(containerId);
     if (!container) return null;
 
     if (this.maps.has(containerId)) {
-      const existingMap = this.maps.get(containerId);
-      existingMap.invalidateSize();
-      return existingMap;
+      const existing = this.maps.get(containerId);
+      existing.invalidateSize();
+      return existing;
     }
 
     const map = L.map(containerId, {
       zoomControl: true,
-      scrollWheelZoom: true
+      attributionControl: false
     }).setView(center, zoom);
 
-    // Add selected layer (Default Google Maps Roadmap)
-    this.applyTileLayer(containerId, map, layerType);
+    const layerCfg = CONFIG.MAP.LAYERS.google_roadmap;
+    const tileLayer = L.tileLayer(layerCfg.url, {
+      maxZoom: 20,
+      subdomains: layerCfg.subdomains || []
+    }).addTo(map);
+
+    map._currentLayer = tileLayer;
 
     this.maps.set(containerId, map);
     this.markers.set(containerId, []);
     this.polylines.set(containerId, []);
 
-    // Inject Floating Layer Switcher Controls
-    this.injectLayerSwitcher(containerId);
+    this.addLayerSwitcher(containerId, map);
 
-    setTimeout(() => map.invalidateSize(), 300);
+    setTimeout(() => map.invalidateSize(), 250);
     return map;
   }
 
-  applyTileLayer(containerId, map, layerType) {
-    if (this.currentTileLayers.has(containerId)) {
-      map.removeLayer(this.currentTileLayers.get(containerId));
+  switchMapLayer(containerId, layerKey) {
+    const map = this.maps.get(containerId);
+    if (!map || !CONFIG.MAP.LAYERS[layerKey]) return;
+
+    if (map._currentLayer) {
+      map.removeLayer(map._currentLayer);
     }
 
-    const layerConfig = CONFIG.MAP.LAYERS[layerType] || CONFIG.MAP.LAYERS.google_roadmap;
-    const tileLayer = L.tileLayer(layerConfig.url, {
-      subdomains: layerConfig.subdomains,
-      attribution: layerConfig.attribution,
-      maxZoom: 20
+    const cfg = CONFIG.MAP.LAYERS[layerKey];
+    const newLayer = L.tileLayer(cfg.url, {
+      maxZoom: 20,
+      subdomains: cfg.subdomains || []
     }).addTo(map);
 
-    this.currentTileLayers.set(containerId, tileLayer);
-  }
+    map._currentLayer = newLayer;
 
-  switchMapLayer(containerId, layerType) {
-    const map = this.maps.get(containerId);
-    if (!map) return;
-    this.applyTileLayer(containerId, map, layerType);
-
-    // Update active button state in layer switcher
     const container = document.getElementById(containerId);
     if (container && container.parentElement) {
-      const buttons = container.parentElement.querySelectorAll('.map-layer-btn');
-      buttons.forEach(btn => {
-        if (btn.getAttribute('data-layer') === layerType) {
-          btn.className = 'map-layer-btn active px-2.5 py-1 text-[10px] font-bold rounded-md bg-blue-600 text-white shadow-sm';
+      const btns = container.parentElement.querySelectorAll('.map-layer-btn');
+      btns.forEach(btn => {
+        if (btn.getAttribute('data-layer') === layerKey) {
+          btn.className = 'map-layer-btn px-2.5 py-1 text-[10px] font-bold rounded-md bg-blue-600 text-white shadow-sm';
         } else {
           btn.className = 'map-layer-btn px-2.5 py-1 text-[10px] font-semibold rounded-md bg-white text-slate-700 hover:bg-slate-100 shadow-sm border border-slate-200';
         }
@@ -80,21 +75,18 @@ class MapManager {
     }
   }
 
-  injectLayerSwitcher(containerId) {
+  addLayerSwitcher(containerId, map) {
     const container = document.getElementById(containerId);
     if (!container || !container.parentElement) return;
 
-    // Check if switcher already exists
-    if (container.parentElement.querySelector('.map-layer-controls')) return;
-
     const switcherDiv = document.createElement('div');
-    switcherDiv.className = 'map-layer-controls absolute top-3 right-3 z-[1000] bg-white/95 backdrop-blur-sm p-1 rounded-lg shadow-md border border-slate-200 flex gap-1';
+    switcherDiv.className = 'map-layer-switcher absolute top-3 right-3 z-[1000] flex gap-1 bg-white/95 backdrop-blur-md p-1 rounded-lg shadow-md border border-slate-200';
     switcherDiv.innerHTML = `
-      <button onclick="mapManager.switchMapLayer('${containerId}', 'google_roadmap')" data-layer="google_roadmap" class="map-layer-btn active px-2.5 py-1 text-[10px] font-bold rounded-md bg-blue-600 text-white shadow-sm" title="Google Maps Roadmap">
-        <i class="fa-solid fa-map mr-1"></i> Google
+      <button onclick="mapManager.switchMapLayer('${containerId}', 'google_roadmap')" data-layer="google_roadmap" class="map-layer-btn px-2.5 py-1 text-[10px] font-bold rounded-md bg-blue-600 text-white shadow-sm" title="Google Maps Roadmap">
+        <i class="fa-solid fa-road mr-1"></i> Road
       </button>
-      <button onclick="mapManager.switchMapLayer('${containerId}', 'google_satellite')" data-layer="google_satellite" class="map-layer-btn px-2.5 py-1 text-[10px] font-semibold rounded-md bg-white text-slate-700 hover:bg-slate-100 shadow-sm border border-slate-200" title="Google Satellite with Roads">
-        <i class="fa-solid fa-satellite mr-1"></i> Satellite
+      <button onclick="mapManager.switchMapLayer('${containerId}', 'google_satellite')" data-layer="google_satellite" class="map-layer-btn px-2.5 py-1 text-[10px] font-semibold rounded-md bg-white text-slate-700 hover:bg-slate-100 shadow-sm border border-slate-200" title="Google Satellite Imagery">
+        <i class="fa-solid fa-satellite mr-1"></i> Sat
       </button>
       <button onclick="mapManager.switchMapLayer('${containerId}', 'google_terrain')" data-layer="google_terrain" class="map-layer-btn px-2.5 py-1 text-[10px] font-semibold rounded-md bg-white text-slate-700 hover:bg-slate-100 shadow-sm border border-slate-200" title="Google Terrain">
         <i class="fa-solid fa-mountain mr-1"></i> Terrain
@@ -104,7 +96,6 @@ class MapManager {
       </button>
     `;
 
-    // Make parent container relative if not already
     if (getComputedStyle(container.parentElement).position === 'static') {
       container.parentElement.style.position = 'relative';
     }
@@ -162,7 +153,7 @@ class MapManager {
       iconHtml = `<div class="pin-inner home"><i class="fa-solid fa-house-chimney"></i></div>`;
     } else if (type === 'live') {
       className += ' pin-live';
-      iconHtml = `<div class="pin-inner live"><i class="fa-solid fa-motorcycle"></i></div>`;
+      iconHtml = `<div class="pin-inner" style="background: linear-gradient(135deg, #ef4444, #b91c1c); box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.4);"><i class="fa-solid fa-motorcycle"></i></div>`;
     } else {
       className += ' pin-customer';
       iconHtml = `<div class="pin-inner customer">${number || '📍'}</div>`;
@@ -187,66 +178,68 @@ class MapManager {
     this.clearMap(containerId);
     const bounds = L.latLngBounds();
 
-    stops.forEach((stop, index) => {
-      let pinType = 'customer';
-      let pinLabel = index;
-
-      if (index === 0) {
-        pinType = 'office';
-      } else if (index === stops.length - 1) {
-        pinType = 'home';
-      }
-
-      const lat = Number(stop.latitude || stop.lat);
-      const lng = Number(stop.longitude || stop.lng);
-
-      if (isNaN(lat) || isNaN(lng)) return;
-
-      const latLng = L.latLng(lat, lng);
+    let customerIdx = 1;
+    stops.forEach((stop) => {
+      const latLng = L.latLng(stop.latitude, stop.longitude);
       bounds.extend(latLng);
 
-      const marker = L.marker(latLng, {
-        icon: this.createCustomIcon(pinType, pinLabel, stop.name)
-      });
+      let pinType = 'customer';
+      let pinLabel = customerIdx.toString();
 
-      let popupHtml = `
+      if (stop.type === 'office') {
+        pinType = 'office';
+        pinLabel = '🏢';
+      } else if (stop.type === 'home') {
+        pinType = 'home';
+        pinLabel = '🏠';
+      } else {
+        customerIdx++;
+      }
+
+      const icon = this.createCustomIcon(pinType, pinLabel, stop.name);
+      const marker = L.marker(latLng, { icon: icon }).addTo(map);
+
+      marker.bindPopup(`
         <div class="map-popup-card">
-          <div class="popup-tag tag-${pinType}">${pinType.toUpperCase()}</div>
-          <h4 class="popup-title">${stop.name || stop.title}</h4>
-          <p class="popup-address">${stop.address || ''}</p>
-          ${stop.phone ? `<p class="popup-contact"><i class="fa-solid fa-phone"></i> ${stop.phone}</p>` : ''}
-          <div class="mt-2 pt-1 border-t border-slate-200">
-            <a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" class="text-[11px] text-blue-600 hover:underline font-bold flex items-center gap-1">
-              <i class="fa-solid fa-diamond-turn-right"></i> Open in Google Maps
-            </a>
+          <div class="popup-tag ${stop.type === 'office' ? 'tag-office' : (stop.type === 'home' ? 'tag-home' : 'tag-customer')}">
+            ${stop.type === 'office' ? 'STARTING HUB' : (stop.type === 'home' ? 'RETURN DESTINATION' : `CUSTOMER STOP ${pinLabel}`)}
           </div>
+          <h4 class="popup-title">${stop.name}</h4>
+          <p class="popup-address">${stop.address}</p>
+          ${stop.phone ? `<p class="text-xs text-slate-500 mt-1">📞 ${stop.contact_person || 'Contact'}: ${stop.phone}</p>` : ''}
         </div>
-      `;
+      `);
 
-      marker.bindPopup(popupHtml);
-      marker.addTo(map);
       this.markers.get(containerId).push(marker);
     });
 
-    if (legs && legs.length > 0) {
-      const legColors = ['#2563eb', '#7c3aed', '#059669', '#d97706', '#dc2626', '#0891b2'];
+    if (allRouteCoords && allRouteCoords.length > 0) {
+      const line = L.polyline(allRouteCoords, {
+        color: '#2563eb',
+        weight: 5,
+        opacity: 0.85,
+        lineCap: 'round',
+        lineJoin: 'round'
+      }).addTo(map);
 
-      legs.forEach((leg, idx) => {
-        const color = legColors[idx % legColors.length];
+      this.polylines.get(containerId).push(line);
+      allRouteCoords.forEach(pt => bounds.extend(L.latLng(pt[0], pt[1])));
+    } else if (legs && legs.length > 0) {
+      legs.forEach(leg => {
         const coords = leg.coordinates || [
           [leg.fromLat, leg.fromLng],
           [leg.toLat, leg.toLng]
         ];
 
         const shadowLine = L.polyline(coords, {
-          color: '#000',
+          color: '#1e3a8a',
           weight: 7,
-          opacity: 0.15,
+          opacity: 0.35,
           smoothFactor: 1
         }).addTo(map);
 
         const mainLine = L.polyline(coords, {
-          color: color,
+          color: '#3b82f6',
           weight: 4,
           opacity: 0.85,
           dashArray: '8, 6',
@@ -343,7 +336,10 @@ class MapManager {
     }
   }
 
-  renderFleetOverview(containerId, engineers, livePings) {
+  /**
+   * Render Real-Time Fleet Radar Map (Live GPS for all engineers)
+   */
+  renderFleetRadar(containerId, engineers, livePings) {
     let map = this.getMap(containerId);
     if (!map) {
       map = this.init(containerId);
@@ -374,22 +370,23 @@ class MapManager {
       const latLng = L.latLng(lat, lng);
       bounds.extend(latLng);
 
-      const isLive = !!ping;
+      const isLive = !!ping && gpsTracker.isEngineerOnline(eng.id);
       const iconType = isLive ? 'live' : 'home';
 
       const marker = L.marker(latLng, {
-        icon: this.createCustomIcon(iconType, '', eng.name)
+        icon: this.createCustomIcon(iconType, '', eng.name),
+        zIndexOffset: isLive ? 1000 : 100
       }).addTo(map);
 
       marker.bindPopup(`
         <div class="map-popup-card">
-          <div class="popup-tag ${isLive ? 'bg-red-100 text-red-700' : 'tag-home'}">
-            ${isLive ? 'LIVE ON ROAD' : 'AT HOME / OFF-DUTY'}
+          <div class="popup-tag ${isLive ? 'bg-red-100 text-red-700 font-bold' : 'tag-home'}">
+            ${isLive ? '🔴 LIVE ON ROAD' : 'AT HOME / OFF-DUTY'}
           </div>
           <h4 class="popup-title">${eng.name}</h4>
           <p class="popup-address">
             <strong>Vehicle:</strong> ${eng.vehicle_type} (${eng.vehicle_number || 'N/A'})<br>
-            ${isLive ? `<strong>Speed:</strong> ${ping.speedKmH || 0} km/h • <strong>Signal:</strong> &plusmn;${ping.accuracy}m<br><small>Last ping: ${new Date(ping.timestamp).toLocaleTimeString()}</small>` : `Home: ${eng.home_address}`}
+            ${isLive ? `<strong>Speed:</strong> ${ping.speedKmH || 0} km/h • <strong>Signal:</strong> &plusmn;${ping.accuracy}m<br><small class="text-slate-400">Ping: ${new Date(ping.timestamp).toLocaleTimeString()}</small>` : `Home: ${eng.home_address}`}
           </p>
         </div>
       `);
@@ -398,41 +395,13 @@ class MapManager {
     });
 
     if (bounds.isValid()) {
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 13 });
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
     }
   }
 
-  setupLocationPicker(containerId, initialLat, initialLng, onSelectCallback) {
-    const map = this.init(containerId, [initialLat || 28.53551, initialLng || 77.27308], 13);
-    if (!map) return;
-
-    this.clearMap(containerId);
-
-    const lat = initialLat || 28.53551;
-    const lng = initialLng || 77.27308;
-
-    const marker = L.marker([lat, lng], {
-      draggable: true,
-      icon: this.createCustomIcon('customer', '📍')
-    }).addTo(map);
-
-    this.markers.get(containerId).push(marker);
-
-    marker.on('dragend', function (e) {
-      const position = marker.getLatLng();
-      if (onSelectCallback) {
-        onSelectCallback(Number(position.lat.toFixed(6)), Number(position.lng.toFixed(6)));
-      }
-    });
-
-    map.on('click', function (e) {
-      marker.setLatLng(e.latlng);
-      if (onSelectCallback) {
-        onSelectCallback(Number(e.latlng.lat.toFixed(6)), Number(e.latlng.lng.toFixed(6)));
-      }
-    });
-
-    return map;
+  // Alias for compatibility
+  renderFleetOverview(containerId, engineers, livePings) {
+    this.renderFleetRadar(containerId, engineers, livePings);
   }
 }
 

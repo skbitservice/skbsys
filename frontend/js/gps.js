@@ -1,11 +1,11 @@
 /**
  * Engineer Travel Distance & Payout System
- * Phone GPS Tracker & Route Simulator Engine
+ * Phone GPS Tracker & Real-Time Fleet Radar Engine
  * - HTML5 Geolocation API (watchPosition & high accuracy)
+ * - Live Cloud Sync to Supabase table `public.live_gps_pings`
  * - GPS Breadcrumb Trail & Actual Logged KM Odometer
  * - Proximity Geofencing (Auto-detect arrival within 150m)
- * - Real-time Ride Simulator for testing without driving
- * - 1-Click GPS Location Detection & Reverse Geocoding
+ * - Real-time Ride Simulator for testing
  */
 
 class GPSTracker {
@@ -20,15 +20,13 @@ class GPSTracker {
     this.lastBreadcrumbCoord = null;
     this.activeEngineerId = null;
     this.callbacks = new Set();
+    this.lastCloudSyncTime = 0;
   }
 
   isSupported() {
     return 'geolocation' in navigator;
   }
 
-  /**
-   * Subscribe to GPS position updates
-   */
   subscribe(callback) {
     this.callbacks.add(callback);
     return () => this.callbacks.delete(callback);
@@ -40,9 +38,6 @@ class GPSTracker {
     });
   }
 
-  /**
-   * Get Single Current GPS Location with High Accuracy Promise
-   */
   async getCurrentLocation() {
     if (!this.isSupported()) {
       throw new Error('Geolocation is not supported by this browser/device.');
@@ -63,9 +58,6 @@ class GPSTracker {
     });
   }
 
-  /**
-   * Reverse Geocode (Lat, Lng -> Readable Street Address)
-   */
   async reverseGeocode(lat, lng) {
     try {
       const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
@@ -94,7 +86,7 @@ class GPSTracker {
   }
 
   /**
-   * Start Live Phone GPS Tracking using HTML5 Geolocation API
+   * Start Live Phone GPS Tracking
    */
   startPhoneTracking(engineerId, onPositionUpdate, onError) {
     if (!this.isSupported()) {
@@ -118,20 +110,20 @@ class GPSTracker {
     };
 
     const handleSuccess = (pos) => {
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
-      const accuracy = pos.coords.accuracy;
-      const speed = pos.coords.speed ? (pos.coords.speed * 3.6) : 0; // Convert m/s to km/h
-      const heading = pos.coords.heading || 0;
-      const timestamp = new Date(pos.timestamp).toISOString();
+      const lat = Number(pos.coords.latitude.toFixed(6));
+      const lng = Number(pos.coords.longitude.toFixed(6));
+      const accuracy = Math.round(pos.coords.accuracy);
+      const speed = pos.coords.speed ? Math.round(pos.coords.speed * 3.6) : 0;
+      const heading = pos.coords.heading ? Math.round(pos.coords.heading) : 0;
+      const timestamp = new Date().toISOString();
 
       const posData = {
         engineerId: this.activeEngineerId,
         latitude: lat,
         longitude: lng,
-        accuracy: Math.round(accuracy),
-        speedKmH: Math.round(speed),
-        heading: Math.round(heading),
+        accuracy,
+        speedKmH: speed,
+        heading,
         timestamp,
         isSimulated: false
       };
@@ -154,9 +146,6 @@ class GPSTracker {
     return true;
   }
 
-  /**
-   * Stop GPS Tracking & clear watchers
-   */
   stopTracking() {
     if (this.watchId !== null) {
       navigator.geolocation.clearWatch(this.watchId);
@@ -171,9 +160,6 @@ class GPSTracker {
     console.log('⏹ GPS Tracking stopped.');
   }
 
-  /**
-   * Record breadcrumb coordinate and accumulate real odometer distance
-   */
   recordBreadcrumb(lat, lng, accuracy = 10, speed = 0) {
     const timestamp = new Date().toISOString();
     const point = [lat, lng, timestamp, accuracy, speed];
@@ -187,7 +173,6 @@ class GPSTracker {
         lng
       );
 
-      // Only count movement if greater than 10 meters (prevents GPS jitter while stationary)
       if (deltaKm > 0.01) {
         this.actualLoggedKm = Number((this.actualLoggedKm + deltaKm).toFixed(2));
         this.lastBreadcrumbCoord = [lat, lng];
@@ -203,17 +188,81 @@ class GPSTracker {
   }
 
   /**
-   * Save real-time ping to storage so Admin Fleet Map can track all engineers live
+   * Save real-time ping to LocalStorage AND Sync to Supabase Cloud
    */
   saveLivePing(posData) {
+    if (!posData || !posData.engineerId) return;
+
     try {
+      // 1. Local Cache
       const pingsKey = 'ttp_live_pings';
       const existing = JSON.parse(localStorage.getItem(pingsKey) || '{}');
       existing[posData.engineerId] = posData;
       localStorage.setItem(pingsKey, JSON.stringify(existing));
+
+      // 2. Cloud Sync to Supabase (Throttled to max 1 request every 1.5 seconds)
+      const now = Date.now();
+      if (now - this.lastCloudSyncTime > 1500) {
+        this.lastCloudSyncTime = now;
+        this.syncPingToSupabase(posData);
+      }
     } catch (e) {
       console.error('Error saving live ping:', e);
     }
+  }
+
+  async syncPingToSupabase(posData) {
+    if (window.db && db.supabaseClient) {
+      try {
+        await db.supabaseClient.from('live_gps_pings').upsert({
+          engineer_id: posData.engineerId,
+          latitude: posData.latitude,
+          longitude: posData.longitude,
+          speed_kmh: posData.speedKmH || 0,
+          accuracy: posData.accuracy || 10,
+          is_simulated: !!posData.isSimulated,
+          updated_at: new Date().toISOString()
+        });
+      } catch (err) {
+        console.warn('Supabase ping sync note:', err.message);
+      }
+    }
+  }
+
+  /**
+   * Fetch all latest live pings (from Supabase Cloud + Local Cache)
+   */
+  async getAllEngineersLiveLocations() {
+    // 1. Start with local cache
+    const localPings = this.getLivePings();
+
+    // 2. Try pulling latest pings from Supabase Cloud
+    if (window.db && db.supabaseClient) {
+      try {
+        const { data: cloudPings, error } = await db.supabaseClient
+          .from('live_gps_pings')
+          .select('*');
+
+        if (!error && cloudPings && cloudPings.length > 0) {
+          cloudPings.forEach(cp => {
+            localPings[cp.engineer_id] = {
+              engineerId: cp.engineer_id,
+              latitude: Number(cp.latitude),
+              longitude: Number(cp.longitude),
+              speedKmH: Number(cp.speed_kmh || 0),
+              accuracy: Number(cp.accuracy || 10),
+              isSimulated: !!cp.is_simulated,
+              timestamp: cp.updated_at
+            };
+          });
+          localStorage.setItem('ttp_live_pings', JSON.stringify(localPings));
+        }
+      } catch (e) {
+        console.warn('Could not fetch cloud pings:', e.message);
+      }
+    }
+
+    return localPings;
   }
 
   getLivePings() {
@@ -224,22 +273,26 @@ class GPSTracker {
     }
   }
 
-  /**
-   * Proximity Geofencing Check
-   * Returns true if current position is within radiusMeters of target
-   */
+  isEngineerOnline(engineerId) {
+    const pings = this.getLivePings();
+    const ping = pings[engineerId];
+    if (!ping || !ping.timestamp) return false;
+
+    // Online if ping received in the last 3 minutes (180,000 ms)
+    const ageMs = Date.now() - new Date(ping.timestamp).getTime();
+    return ageMs < 180000;
+  }
+
   isNearLocation(currentLat, currentLng, targetLat, targetLng, radiusMeters = 150) {
     if (!currentLat || !currentLng || !targetLat || !targetLng) return false;
     const distKm = distanceEngine.calculateHaversine(currentLat, currentLng, targetLat, targetLng);
-    const distMeters = distKm * 1000;
-    return distMeters <= radiusMeters;
+    return (distKm * 1000) <= radiusMeters;
   }
 
   /**
-   * Realistic Test Ride Simulator
-   * Steps through the route polyline coordinates smoothly for desktop/office testing
+   * Test Ride Simulator (Smooth movement along route)
    */
-  startRideSimulation(engineerId, routeCoordinates, speedMultiplier = 1, onStep, onArrivalAtStop) {
+  startRideSimulation(engineerId, routeCoordinates, speedMultiplier = 1, onStep) {
     if (!routeCoordinates || routeCoordinates.length === 0) {
       alert('No route coordinates available for simulation.');
       return;
@@ -255,9 +308,9 @@ class GPSTracker {
 
     let currentIndex = 0;
     const totalPoints = routeCoordinates.length;
-    const intervalMs = Math.max(80, Math.round(500 / speedMultiplier));
+    const intervalMs = Math.max(100, Math.round(600 / speedMultiplier));
 
-    console.log(`🎮 Starting ride simulation: ${totalPoints} waypoints at ${speedMultiplier}x speed.`);
+    console.log(`🎮 Starting ride simulation: ${totalPoints} waypoints.`);
 
     this.simTimer = setInterval(() => {
       if (currentIndex >= totalPoints) {
@@ -267,8 +320,8 @@ class GPSTracker {
       }
 
       const coord = routeCoordinates[currentIndex];
-      const lat = coord[0];
-      const lng = coord[1];
+      const lat = Number(coord[0].toFixed(6));
+      const lng = Number(coord[1].toFixed(6));
 
       let heading = 0;
       if (currentIndex < totalPoints - 1) {
@@ -276,7 +329,7 @@ class GPSTracker {
         heading = this.calculateBearing(lat, lng, nextCoord[0], nextCoord[1]);
       }
 
-      const simulatedSpeed = Math.floor(25 + Math.random() * 15);
+      const simulatedSpeed = Math.floor(28 + Math.random() * 12);
 
       const posData = {
         engineerId: this.activeEngineerId,
